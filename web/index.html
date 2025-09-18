@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>meeting-merkle</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--page-bg, #f6f8fa);
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(27, 39, 51, 0.1);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+    section {
+      margin-top: 2.5rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      border: 1px solid #d0d7de;
+      padding: 0.75rem;
+      box-sizing: border-box;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: none;
+      border-radius: 999px;
+      padding: 0.6rem 1.4rem;
+      margin-top: 0.75rem;
+      font-weight: 600;
+      background: #0969da;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(9, 105, 218, 0.2);
+    }
+    button.secondary {
+      background: #6366f1;
+    }
+    .status {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .status.ok {
+      background: rgba(46, 160, 67, 0.1);
+      color: #116329;
+      border: 1px solid rgba(46, 160, 67, 0.3);
+    }
+    .status.error {
+      background: rgba(222, 27, 27, 0.1);
+      color: #86181d;
+      border: 1px solid rgba(222, 27, 27, 0.25);
+    }
+    ul.hashes {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0;
+      border-radius: 8px;
+      background: rgba(9, 105, 218, 0.05);
+      border: 1px solid rgba(9, 105, 218, 0.15);
+    }
+    ul.hashes li {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid rgba(9, 105, 218, 0.1);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+    ul.hashes li:first-child {
+      border-top: none;
+    }
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .small {
+      font-size: 0.85rem;
+      color: #57606a;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>meeting-merkle</h1>
+    <p>Hash meeting agendas and notes into a Merkle root, generate membership proofs, and verify them offline.</p>
+
+    <section>
+      <div class="actions">
+        <button id="load-example" type="button" class="secondary">Load example meeting</button>
+      </div>
+      <form id="root-form">
+        <label for="meeting-json">Meeting JSON</label>
+        <textarea id="meeting-json" spellcheck="false" placeholder="Paste meeting JSON here"></textarea>
+        <button type="submit">Compute Merkle root</button>
+      </form>
+      <div id="root-status" class="status" hidden></div>
+      <div id="root-result" hidden>
+        <h3>Merkle root</h3>
+        <p class="small">Hex-encoded SHA-256 root of the Merkle tree.</p>
+        <p id="root-hash" class="small"></p>
+        <h3>Leaf hashes</h3>
+        <ul id="leaf-list" class="hashes"></ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Membership proof</h2>
+      <form id="proof-form">
+        <label for="proof-index">Item index</label>
+        <input id="proof-index" type="number" min="0" step="1" value="0">
+        <button type="submit">Generate proof</button>
+      </form>
+      <div id="proof-status" class="status" hidden></div>
+      <label for="proof-output" class="small">Proof JSON</label>
+      <textarea id="proof-output" spellcheck="false" readonly></textarea>
+    </section>
+
+    <section>
+      <h2>Verify proof</h2>
+      <form id="verify-form">
+        <label for="verify-input">Proof JSON</label>
+        <textarea id="verify-input" spellcheck="false" placeholder="Paste proof JSON here"></textarea>
+        <button type="submit">Verify proof</button>
+      </form>
+      <div id="verify-status" class="status" hidden></div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "meeting_id": "Team-Weekly-2025-09-18",
+  "timestamp": "2025-09-18T10:00:00Z",
+  "salt": "optional-random-string",
+  "items": [
+    {
+      "agenda": "Budget Allocation for Q4",
+      "notes": "Allocate 500 tokens to community fund."
+    },
+    {
+      "agenda": "Project X Update",
+      "notes": "Extend deadline to Nov 30."
+    },
+    {
+      "agenda": "Onboarding",
+      "notes": "No formal resolution."
+    }
+  ]
+}

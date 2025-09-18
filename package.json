@@ -1,0 +1,42 @@
+{
+  "name": "meeting-merkle",
+  "version": "0.1.0",
+  "description": "Tamper-evident meeting record Merkle tree tooling",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "meeting-merkle": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "web",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "merkle",
+    "meeting",
+    "integrity",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  }
+}
