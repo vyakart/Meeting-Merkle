@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Meeting-Merkle — Terminal UI</title>
+<title>Merkle Meet — Terminal UI</title>
 <link rel="icon" href="data:,">
 <style>
 :root{
@@ -70,6 +70,21 @@ body{
   font-weight:700; font-size:18px; letter-spacing:.6px;
 }
 .tagline{color:var(--muted); font-size:12px}
+.logo{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid var(--border-weak);
+  padding:4px;
+  background: var(--panel);
+  object-fit:contain;
+}
+
+[data-theme="light"] .logo{
+  background:#ffffff;
+  box-shadow:0 4px 12px rgba(11,17,26,.08);
+}
+
 .badge{
   margin-left:8px; padding:4px 10px; border:1px solid var(--border-weak);
   border-radius:999px; color:var(--muted); display:flex; align-items:center; gap:8px;
@@ -96,8 +111,19 @@ button.primary{
 }
 button.ghost{background:transparent}
 #theme-toggle{
-  margin-left:auto; padding:6px 12px; font-size:12px;
+  margin-left:auto;
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  padding:0;
 }
+#theme-toggle svg{width:20px;height:20px;display:block;stroke:currentColor;stroke-width:1.5;}
+#theme-toggle circle{stroke:currentColor;fill:none;}
+#theme-toggle line{stroke:currentColor;stroke-linecap:round;}
+#theme-toggle path{stroke:currentColor;stroke-linecap:round;fill:currentColor;stroke-width:1.2;}
 input,textarea{
   width:100%; background:var(--input-bg); color:var(--ink); border:1px solid var(--border-weak);
   border-radius:8px; padding:10px; font-family:var(--mono); font-size:12px;
@@ -154,7 +180,8 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
 </head>
 <body>
   <div class="header" role="banner">
-    <div class="brand">MEETING-MERKLE</div>
+    <img src="assets/merklemeet_logo.svg" alt="Merkle Meet logo" class="logo" width="32" height="32" />
+    <div class="brand">MERKLE MEET</div>
     <div class="tagline">Tamper-evident, privacy-preserving minutes</div>
     <button class="ghost" id="theme-toggle" type="button" aria-label="Toggle theme">Light Theme</button>
     <div class="badge" aria-live="polite">
@@ -437,7 +464,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     return current;
   }
 
-  window.MeetingMerkle = {
+  const defaultApi = {
     async computeRoot(data, options = {}) {
       const { meeting, tree } = await buildTreeFromData(data, options.salt);
       return {
@@ -524,6 +551,16 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     },
   };
 
+  const resolveApi = () => window.MerkleMeet || window.MeetingMerkle || defaultApi;
+
+  if (!window.MerkleMeet && !window.MeetingMerkle) {
+    window.MerkleMeet = defaultApi;
+  }
+
+  if (!window.MeetingMerkle) {
+    window.MeetingMerkle = window.MerkleMeet;
+  }
+
   const log = (msg, cls = '') => {
     const placeholder = document.getElementById('empty-line');
     if (placeholder) {
@@ -550,11 +587,29 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   };
 
   const notWired = (fn) => {
-    log(`> ${fn} not wired. Provide window.MeetingMerkle.${fn}()`, 'bad');
+    log(`> ${fn} not wired. Provide window.MerkleMeet.${fn}()`, 'bad');
   };
 
   const themeToggle = document.getElementById('theme-toggle');
-  const THEME_KEY = 'meeting-merkle-theme';
+  const THEME_KEY = 'merkle-meet-theme';
+  const THEME_ICONS = {
+    light: `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="4.5" fill="none"></circle>
+        <line x1="12" y1="2" x2="12" y2="5"></line>
+        <line x1="12" y1="19" x2="12" y2="22"></line>
+        <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
+        <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
+        <line x1="2" y1="12" x2="5" y2="12"></line>
+        <line x1="19" y1="12" x2="22" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
+        <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
+      </svg>`,
+    dark: `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M21 12.79A9 9 0 0111.21 3a7 7 0 109.79 9.79z" fill="none"></path>
+      </svg>`,
+  };
 
   const applyTheme = (theme) => {
     const normalized = theme === 'light' ? 'light' : 'dark';
@@ -569,10 +624,14 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       /* ignore storage failures */
     }
     if (themeToggle) {
-      const nextLabel = normalized === 'light' ? 'Dark Theme' : 'Light Theme';
-      themeToggle.textContent = nextLabel;
-      themeToggle.setAttribute('aria-label', `Activate ${nextLabel.toLowerCase()}`);
+      const icon = normalized === 'light' ? THEME_ICONS.light : THEME_ICONS.dark;
+      const nextTheme = normalized === 'light' ? 'dark' : 'light';
+      const label = `Switch to ${nextTheme} theme`;
+      themeToggle.innerHTML = icon;
+      themeToggle.setAttribute('aria-label', label);
+      themeToggle.setAttribute('title', label);
       themeToggle.setAttribute('aria-pressed', normalized === 'light' ? 'true' : 'false');
+      themeToggle.dataset.theme = normalized;
     }
   };
 
@@ -587,7 +646,8 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   applyTheme(storedTheme ?? (prefersDark ? 'dark' : 'light'));
 
   themeToggle?.addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    const current = themeToggle.dataset.theme || (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+    const next = current === 'light' ? 'dark' : 'light';
     applyTheme(next);
     log(`> theme set to ${next}`, 'ok');
   });
@@ -651,7 +711,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       log("Couldn't parse JSON. Check for trailing commas or mismatched quotes.", 'bad');
       return;
     }
-    const api = window.MeetingMerkle;
+    const api = resolveApi();
     if (!api?.computeRoot) {
       notWired('computeRoot');
       return;
@@ -685,7 +745,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       return;
     }
     const message = [
-      'Meeting-Merkle \ud83d\uddad\ufe0f',
+      'Merkle Meet \ud83d\uddad\ufe0f',
       `Meeting: ${data.meeting_id || '—'}`,
       `Timestamp: ${data.timestamp || '—'}`,
       `Merkle Root: ${root}`,
@@ -710,7 +770,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       log('> enter an expected root', 'bad');
       return;
     }
-    const api = window.MeetingMerkle;
+    const api = resolveApi();
     if (!api?.verifyRoot) {
       notWired('verifyRoot');
       return;
@@ -742,7 +802,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       log('> enter a numeric item index (0-based)', 'bad');
       return;
     }
-    const api = window.MeetingMerkle;
+    const api = resolveApi();
     if (!api?.generateProof) {
       notWired('generateProof');
       return;
@@ -768,7 +828,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     }
     const displayedRoot = rootCode.textContent;
     const expected = displayedRoot && displayedRoot !== '—' ? displayedRoot : undefined;
-    const api = window.MeetingMerkle;
+    const api = resolveApi();
     if (!api?.verifyProof) {
       notWired('verifyProof');
       return;
