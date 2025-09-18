@@ -1,4 +1,4 @@
-# meeting-merkle
+# merkle-meet
 
 Tamper-evident tooling for hashing meeting agendas and notes into a Merkle tree. The project ships a small reusable TypeScript library, a CLI, and a browser-only single page app for working with offline meeting records.
 
