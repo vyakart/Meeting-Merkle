@@ -172,6 +172,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   background: repeating-linear-gradient(0deg, rgba(255,255,255,.02), rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px);
   mix-blend-mode:overlay; opacity:.25;
 }
+  .hidden{display:none}
 @media (max-width: 900px){
   .grid{grid-template-columns:1fr}
   .kv{grid-template-columns:1fr}
@@ -190,6 +191,13 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
 
   <div class="grid" role="main">
     <aside class="sidebar" aria-label="Steps">
+      <div class="step" id="step-0-transcript">
+        <h3>Step 0 — From Transcript (optional)</h3>
+        <p>Paste a raw transcript; we'll extract agenda + notes and build the JSON for you.</p>
+        <div class="actions">
+          <button class="ghost" id="btn-transcript-panel" type="button">Open Transcript Panel</button>
+        </div>
+      </div>
       <div class="step">
         <h3>Step 1 — Load Minutes</h3>
         <p>Paste your minutes JSON. You can load an example to explore.</p>
@@ -248,6 +256,30 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
         <div class="status">
           <span>Root:</span>
           <code id="root" class="mono">—</code>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="transcript-panel">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="title small" style="font-weight:700">Transcript → JSON</div>
+          <div class="row">
+            <button id="btn-transcript-hide" class="ghost" type="button">Hide</button>
+          </div>
+        </div>
+        <div class="row small" style="margin-bottom:8px">
+          <input id="meeting-id" placeholder="meeting_id (e.g., Team-Weekly-2025-09-18)" />
+          <input id="meeting-timestamp" placeholder="timestamp (ISO-8601, default now)" />
+        </div>
+        <div class="row small" style="margin-bottom:6px">
+          <input type="file" id="transcript-file" accept=".txt,.md,.vtt,.srt" />
+        </div>
+        <label for="transcript" class="small">Transcript (paste raw text here)</label>
+        <textarea id="transcript" rows="8" placeholder="Paste the meeting transcript here… Bullets (-, * , 1.) or lines starting with 'Agenda:'/'Topic:' become items. Blank lines split paragraphs."></textarea>
+        <div class="actions" style="margin-top:8px">
+          <button id="btn-parse-transcript" class="primary" type="button">Parse to JSON</button>
+        </div>
+        <div class="small" style="color:var(--muted);margin-top:8px">
+          Tips: Recognizes bullets, numbered lists, and 'Agenda:'/'Topic:' headers. You can edit the generated JSON before computing the root.
         </div>
       </div>
 
@@ -684,6 +716,16 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   const saltInput = document.getElementById('salt');
   const whyLink = document.getElementById('why-link');
 
+  // Transcript panel elements
+  const transcriptPanel = document.getElementById('transcript-panel');
+  const btnTranscriptPanel = document.getElementById('btn-transcript-panel');
+  const btnTranscriptHide = document.getElementById('btn-transcript-hide');
+  const btnParseTranscript = document.getElementById('btn-parse-transcript');
+  const meetingIdInput = document.getElementById('meeting-id');
+  const meetingTsInput = document.getElementById('meeting-timestamp');
+  const transcriptInput = document.getElementById('transcript');
+  const transcriptFileInput = document.getElementById('transcript-file');
+
   btnExample.addEventListener('click', () => {
     jsonBox.value = JSON.stringify(example, null, 2);
     log('> loaded example minutes');
@@ -854,6 +896,134 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
       '- Include the salt in each item leaf derivation, or in the meeting metadata.',
     ].join('\n');
     log('> opened note: salting', 'ok');
+  });
+
+  // ===== Transcript → JSON helpers =====
+  function defaultMeetingId() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `Meeting-${yyyy}-${mm}-${dd}`;
+  }
+
+  function ensureMeetingDefaults() {
+    if (meetingIdInput && !meetingIdInput.value) {
+      meetingIdInput.value = defaultMeetingId();
+    }
+    if (meetingTsInput && !meetingTsInput.value) {
+      meetingTsInput.value = new Date().toISOString();
+    }
+  }
+
+  function firstSentence(str) {
+    const s = String(str || '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    const m = s.match(/^(.{1,140}?[\.\!\?])\s/);
+    return (m ? m[1] : s.slice(0, 80));
+  }
+
+  function parseTranscriptToItems(text) {
+    const cleaned = String(text || '').replace(/\r\n?/g, '\n').trim();
+    if (!cleaned) return [];
+
+    const lines = cleaned.split('\n');
+
+    // Pass 1: marker-based extraction (Agenda:/Topic:/Item:, bullets -,*,•, or numbered 1.)
+    const items = [];
+    let current = null;
+    const flush = () => {
+      if (current) {
+        const agenda = (current.agenda || '').trim();
+        const notes = current.notes.join('\n').trim();
+        if (agenda || notes) items.push({ agenda: agenda || firstSentence(notes), notes });
+        current = null;
+      }
+    };
+
+    const agendaRe = /^\s*(?:agenda|topic|item)\s*[:\-]\s*(.+)$/i;
+    const bulletRe = /^\s*(?:[\-\*\u2022]|[0-9]{1,2}\.)\s+(.+)$/;
+
+    for (const raw of lines) {
+      const line = raw.trimRight();
+      if (!line.trim()) { // allow blank lines inside notes; they help the paragraph fallback
+        if (current) current.notes.push('');
+        continue;
+      }
+      let m;
+      if ((m = line.match(agendaRe))) {
+        flush();
+        current = { agenda: m[1].trim(), notes: [] };
+        continue;
+      }
+      if ((m = line.match(bulletRe))) {
+        flush();
+        current = { agenda: m[1].trim(), notes: [] };
+        continue;
+      }
+      // speaker timestamp lines like "[00:10] Alice: ..."
+      // treat as note content
+      if (!current) {
+        current = { agenda: firstSentence(line), notes: [line] };
+      } else {
+        current.notes.push(line);
+      }
+    }
+    flush();
+
+    if (items.length > 0) {
+      return items.slice(0, 100); // guardrail: max 100 items
+    }
+
+    // Pass 2: paragraph-based fallback (split by blank lines)
+    const paragraphs = cleaned.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+    const paraItems = paragraphs.map(p => ({ agenda: firstSentence(p), notes: p }));
+    return paraItems.slice(0, 100);
+  }
+
+  // Wire up transcript panel
+  btnTranscriptPanel?.addEventListener('click', () => {
+    transcriptPanel?.classList.toggle('hidden');
+    const opened = !transcriptPanel?.classList.contains('hidden');
+    ensureMeetingDefaults();
+    log(`> transcript panel ${opened ? 'opened' : 'closed'}`);
+  });
+
+  btnTranscriptHide?.addEventListener('click', () => {
+    transcriptPanel?.classList.add('hidden');
+    log('> transcript panel closed');
+  });
+
+  transcriptFileInput?.addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const text = await f.text().catch(() => '');
+    if (text) {
+      transcriptInput.value = text;
+      log(`> loaded transcript file: ${f.name}`, 'ok');
+    } else {
+      log('> failed to read transcript file', 'bad');
+    }
+  });
+
+  btnParseTranscript?.addEventListener('click', () => {
+    const text = transcriptInput?.value || '';
+    if (!text.trim()) {
+      log('> paste a transcript first', 'bad');
+      return;
+    }
+    ensureMeetingDefaults();
+    const items = parseTranscriptToItems(text);
+    if (!items.length) {
+      log('> could not detect items; creating single-item notes', 'bad');
+    }
+    const meeting_id = (meetingIdInput?.value || '').trim() || defaultMeetingId();
+    const timestamp = (meetingTsInput?.value || '').trim() || new Date().toISOString();
+    const salt = (saltInput?.value || '').trim();
+    const meeting = Object.assign({ meeting_id, timestamp, items }, salt ? { salt } : {});
+    jsonBox.value = JSON.stringify(meeting, null, 2);
+    log(`> parsed transcript into ${items.length || 1} item${items.length === 1 ? '' : 's'}; populated Minutes JSON`, 'ok');
+    setIntegrity(null);
   });
 })();
 </script>
