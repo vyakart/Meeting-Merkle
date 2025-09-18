@@ -70,20 +70,6 @@ body{
   font-weight:700; font-size:18px; letter-spacing:.6px;
 }
 .tagline{color:var(--muted); font-size:12px}
-.logo{
-  width:40px;
-  height:40px;
-  border-radius:12px;
-  border:1px solid var(--border-weak);
-  padding:4px;
-  background: var(--panel);
-  object-fit:contain;
-}
-
-[data-theme="light"] .logo{
-  background:#ffffff;
-  box-shadow:0 4px 12px rgba(11,17,26,.08);
-}
 
 .badge{
   margin-left:8px; padding:4px 10px; border:1px solid var(--border-weak);
@@ -172,7 +158,75 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   background: repeating-linear-gradient(0deg, rgba(255,255,255,.02), rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px);
   mix-blend-mode:overlay; opacity:.25;
 }
-  .hidden{display:none}
+body.modal-open{overflow:hidden;}
+
+.transcript-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(6,12,18,0.78);
+  backdrop-filter:blur(10px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:1000;
+}
+
+.transcript-overlay.open{display:flex;}
+
+.transcript-dialog{
+  width:min(960px,100%);
+  max-height:90vh;
+  overflow:auto;
+  background:var(--panel);
+  border:var(--line);
+  border-radius:var(--br);
+  padding:20px;
+  box-shadow:0 40px 80px rgba(0,0,0,0.45);
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.transcript-dialog header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.transcript-dialog h2{
+  margin:0;
+  font-size:16px;
+  letter-spacing:.4px;
+}
+
+.transcript-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+
+@media (max-width: 960px){
+  .transcript-grid{grid-template-columns:1fr;}
+}
+
+.transcript-section{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.transcript-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.transcript-note{
+  font-size:12px;
+  color:var(--muted);
+}
 @media (max-width: 900px){
   .grid{grid-template-columns:1fr}
   .kv{grid-template-columns:1fr}
@@ -193,9 +247,9 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     <aside class="sidebar" aria-label="Steps">
       <div class="step" id="step-0-transcript">
         <h3>Step 0 — From Transcript (optional)</h3>
-        <p>Paste a raw transcript; we'll extract agenda + notes and build the JSON for you.</p>
+        <p>Drop in a raw transcript, convert to meeting JSON, then copy, download, or fill Step 1 automatically.</p>
         <div class="actions">
-          <button class="ghost" id="btn-transcript-panel" type="button">Open Transcript Panel</button>
+          <button class="ghost" id="btn-transcript-panel" type="button">Open Transcript Converter</button>
         </div>
       </div>
       <div class="step">
@@ -259,30 +313,6 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
         </div>
       </div>
 
-      <div class="panel hidden" id="transcript-panel">
-        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div class="title small" style="font-weight:700">Transcript → JSON</div>
-          <div class="row">
-            <button id="btn-transcript-hide" class="ghost" type="button">Hide</button>
-          </div>
-        </div>
-        <div class="row small" style="margin-bottom:8px">
-          <input id="meeting-id" placeholder="meeting_id (e.g., Team-Weekly-2025-09-18)" />
-          <input id="meeting-timestamp" placeholder="timestamp (ISO-8601, default now)" />
-        </div>
-        <div class="row small" style="margin-bottom:6px">
-          <input type="file" id="transcript-file" accept=".txt,.md,.vtt,.srt" />
-        </div>
-        <label for="transcript" class="small">Transcript (paste raw text here)</label>
-        <textarea id="transcript" rows="8" placeholder="Paste the meeting transcript here… Bullets (-, * , 1.) or lines starting with 'Agenda:'/'Topic:' become items. Blank lines split paragraphs."></textarea>
-        <div class="actions" style="margin-top:8px">
-          <button id="btn-parse-transcript" class="primary" type="button">Parse to JSON</button>
-        </div>
-        <div class="small" style="color:var(--muted);margin-top:8px">
-          Tips: Recognizes bullets, numbered lists, and 'Agenda:'/'Topic:' headers. You can edit the generated JSON before computing the root.
-        </div>
-      </div>
-
       <div class="panel kv">
         <div class="box">
           <label for="json">Minutes JSON</label>
@@ -314,6 +344,40 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   </div>
 
   <div class="scanlines" aria-hidden="true"></div>
+
+  <div class="transcript-overlay" id="transcript-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="transcript-dialog" id="transcript-dialog">
+      <header>
+        <h2>Transcript → Meeting JSON</h2>
+        <button id="btn-transcript-close" class="ghost" type="button" aria-label="Close transcript converter">×</button>
+      </header>
+      <div class="transcript-grid">
+        <div class="transcript-section">
+          <label class="small" for="meeting-id">Meeting metadata</label>
+          <div class="row small" style="gap:8px;flex-wrap:wrap">
+            <input id="meeting-id" placeholder="meeting_id" style="flex:1 1 200px" />
+            <input id="meeting-timestamp" placeholder="timestamp (ISO-8601)" style="flex:1 1 220px" />
+          </div>
+          <input type="file" id="transcript-file" accept=".txt,.md,.vtt,.srt" class="small" />
+          <label class="small" for="transcript">Transcript (paste raw text)</label>
+          <textarea id="transcript" rows="14" placeholder="Paste the meeting transcript here… Bullets (-, *, 1.) or lines starting with 'Agenda:'/'Topic:' become items. Blank lines split paragraphs."></textarea>
+        </div>
+        <div class="transcript-section">
+          <label class="small" for="transcript-json">Generated meeting JSON</label>
+          <textarea id="transcript-json" rows="14" class="mono" placeholder="Converted JSON will appear here after parsing."></textarea>
+        </div>
+      </div>
+      <div class="transcript-actions">
+        <button id="btn-parse-transcript" class="primary" type="button">Convert Transcript</button>
+        <button id="btn-transcript-copy" type="button">Copy JSON</button>
+        <button id="btn-transcript-download" type="button">Download JSON</button>
+        <button id="btn-transcript-fill" type="button">Send to Step 1</button>
+      </div>
+      <div class="transcript-note">
+        Recognizes bullets, numbered lists, and “Agenda:”/“Topic:” headers. You can tweak the JSON before copying or filling Step 1.
+      </div>
+    </div>
+  </div>
 
 <script>
 (() => {
@@ -716,14 +780,18 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   const saltInput = document.getElementById('salt');
   const whyLink = document.getElementById('why-link');
 
-  // Transcript panel elements
-  const transcriptPanel = document.getElementById('transcript-panel');
+  // Transcript converter elements
+  const transcriptOverlay = document.getElementById('transcript-overlay');
   const btnTranscriptPanel = document.getElementById('btn-transcript-panel');
-  const btnTranscriptHide = document.getElementById('btn-transcript-hide');
+  const btnTranscriptClose = document.getElementById('btn-transcript-close');
   const btnParseTranscript = document.getElementById('btn-parse-transcript');
+  const btnTranscriptCopy = document.getElementById('btn-transcript-copy');
+  const btnTranscriptDownload = document.getElementById('btn-transcript-download');
+  const btnTranscriptFill = document.getElementById('btn-transcript-fill');
   const meetingIdInput = document.getElementById('meeting-id');
   const meetingTsInput = document.getElementById('meeting-timestamp');
   const transcriptInput = document.getElementById('transcript');
+  const transcriptJsonOutput = document.getElementById('transcript-json');
   const transcriptFileInput = document.getElementById('transcript-file');
 
   btnExample.addEventListener('click', () => {
@@ -981,17 +1049,43 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     return paraItems.slice(0, 100);
   }
 
-  // Wire up transcript panel
-  btnTranscriptPanel?.addEventListener('click', () => {
-    transcriptPanel?.classList.toggle('hidden');
-    const opened = !transcriptPanel?.classList.contains('hidden');
+  function openTranscriptOverlay() {
     ensureMeetingDefaults();
-    log(`> transcript panel ${opened ? 'opened' : 'closed'}`);
+    if (!transcriptOverlay?.classList.contains('open')) {
+      transcriptOverlay.classList.add('open');
+      document.body.classList.add('modal-open');
+      transcriptOverlay.setAttribute('aria-hidden', 'false');
+      log('> transcript converter opened');
+    }
+  }
+
+  function closeTranscriptOverlay() {
+    if (transcriptOverlay?.classList.contains('open')) {
+      transcriptOverlay.classList.remove('open');
+      document.body.classList.remove('modal-open');
+      transcriptOverlay.setAttribute('aria-hidden', 'true');
+      log('> transcript converter closed');
+    }
+  }
+
+  btnTranscriptPanel?.addEventListener('click', () => {
+    openTranscriptOverlay();
   });
 
-  btnTranscriptHide?.addEventListener('click', () => {
-    transcriptPanel?.classList.add('hidden');
-    log('> transcript panel closed');
+  btnTranscriptClose?.addEventListener('click', () => {
+    closeTranscriptOverlay();
+  });
+
+  transcriptOverlay?.addEventListener('click', (event) => {
+    if (event.target === transcriptOverlay) {
+      closeTranscriptOverlay();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && transcriptOverlay?.classList.contains('open')) {
+      closeTranscriptOverlay();
+    }
   });
 
   transcriptFileInput?.addEventListener('change', async (e) => {
@@ -1021,9 +1115,50 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
     const timestamp = (meetingTsInput?.value || '').trim() || new Date().toISOString();
     const salt = (saltInput?.value || '').trim();
     const meeting = Object.assign({ meeting_id, timestamp, items }, salt ? { salt } : {});
-    jsonBox.value = JSON.stringify(meeting, null, 2);
-    log(`> parsed transcript into ${items.length || 1} item${items.length === 1 ? '' : 's'}; populated Minutes JSON`, 'ok');
+    const json = JSON.stringify(meeting, null, 2);
+    if (transcriptJsonOutput) {
+      transcriptJsonOutput.value = json;
+    }
+    log(`> converted transcript into ${items.length || 1} item${items.length === 1 ? '' : 's'} of meeting JSON`, 'ok');
+  });
+
+  btnTranscriptCopy?.addEventListener('click', () => {
+    if (!transcriptJsonOutput?.value.trim()) {
+      log('> convert transcript before copying', 'bad');
+      return;
+    }
+    copy(transcriptJsonOutput.value);
+  });
+
+  btnTranscriptDownload?.addEventListener('click', () => {
+    const payload = transcriptJsonOutput?.value.trim();
+    if (!payload) {
+      log('> convert transcript before downloading', 'bad');
+      return;
+    }
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const baseName = (meetingIdInput?.value || defaultMeetingId()).replace(/[^a-z0-9\-]+/gi, '_');
+    link.href = url;
+    link.download = `${baseName || 'meeting'}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    log('> downloaded meeting JSON', 'ok');
+  });
+
+  btnTranscriptFill?.addEventListener('click', () => {
+    const payload = transcriptJsonOutput?.value.trim();
+    if (!payload) {
+      log('> convert transcript before sending to Step 1', 'bad');
+      return;
+    }
+    jsonBox.value = payload;
     setIntegrity(null);
+    closeTranscriptOverlay();
+    log('> meeting JSON filled into Step 1', 'ok');
   });
 })();
 </script>
