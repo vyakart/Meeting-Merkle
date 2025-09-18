@@ -419,6 +419,27 @@ body.modal-open{overflow:hidden;}
 .proof-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
 .feed ul{margin:0;padding-left:18px;}
 
+.bls-section{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.bls-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.bls-mode label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.bls-mode input{margin:0;}
+.bls-note{display:flex;align-items:center;gap:6px;}
+.bls-note .tooltip{margin-left:auto;}
+.bls-table-wrap{border:1px solid var(--border-weak);border-radius:8px;overflow:hidden;background:rgba(255,255,255,.02);}
+.bls-table{width:100%;border-collapse:collapse;font-size:11px;}
+.bls-table th,.bls-table td{border-bottom:1px solid var(--border-weak);padding:6px;vertical-align:top;word-break:break-all;}
+.bls-table:not(.has-pop) th:nth-child(2),
+.bls-table:not(.has-pop) td:nth-child(2){display:none;}
+.bls-table tbody tr:last-child td{border-bottom:none;}
+.bls-actions-col{width:70px;}
+.bls-table button{font-size:11px;padding:4px 8px;}
+.bls-add-row input{flex:1 1 140px;}
+#bls-attestation{min-height:140px;}
+#bls-signature,#bls-aggregate-sig{min-height:72px;}
+.bls-verify-status{font-size:11px;color:var(--muted);margin-top:4px;}
+.bls-verify-status.ok{color:var(--ok);}
+.bls-verify-status.bad{color:var(--danger);}
+
 .hero-sticky-spacer{height:0;}
 body.modal-open{overflow:hidden;}
 
@@ -529,11 +550,113 @@ body.modal-open{overflow:hidden;}
 
       <details class="step" id="step-3" open>
         <summary>
-          <span>Step 3 — Publish &amp; Share</span>
-          <button class="step-help" type="button" data-help="help-step-3" aria-label="Explain publishing the root">?</button>
+          <span>Step 3 — Co-sign Root (BLS)</span>
+          <button class="step-help" type="button" data-help="help-step-3" aria-label="Explain BLS co-signing">?</button>
         </summary>
         <div class="step-body">
-          <div class="step-helptext" id="help-step-3">Share the Merkle root (and proof, if needed) with your team. Anyone can recompute the root locally and confirm it matches.</div>
+          <div class="step-helptext" id="help-step-3">BLS signatures let multiple attendees co-sign the same Merkle root. Augmentation defends against rogue keys; proof-of-possession enables fast aggregate verification once each key is registered.</div>
+          <p>Select an aggregation mode, derive your key pair, then sign and collect signatures for this attestation.</p>
+          <div class="bls-section" role="group" aria-labelledby="bls-mode-label">
+            <span id="bls-mode-label" class="small">Aggregation mode</span>
+            <div class="bls-row bls-mode">
+              <label>
+                <input type="radio" name="bls-mode" value="aug" checked />
+                Augmentation (default)
+              </label>
+              <label>
+                <input type="radio" name="bls-mode" value="pop" />
+                Proof-of-possession (fast verify)
+              </label>
+            </div>
+          </div>
+          <div class="bls-section">
+            <label for="bls-sk">Your BLS Secret Key (hex, 32 bytes)</label>
+            <div class="bls-row">
+              <input id="bls-sk" autocomplete="off" placeholder="Paste or generate a 32-byte hex secret" />
+              <button id="btn-bls-generate-sk" type="button">Generate demo key</button>
+            </div>
+            <div class="small bls-note" role="note">Demo-only keygen: bring your real secret key for production co-signing.</div>
+          </div>
+          <div class="bls-section">
+            <label for="bls-pk">Your BLS Public Key (hex)</label>
+            <input id="bls-pk" placeholder="Auto-derived once the secret key is set" />
+          </div>
+          <div class="bls-section" id="bls-pop-section" hidden>
+            <label for="bls-pop">Your PoP (hex)</label>
+            <div class="bls-row">
+              <input id="bls-pop" placeholder="Proof-of-possession for your public key" />
+              <button id="btn-bls-generate-pop" type="button">Generate PoP</button>
+            </div>
+          </div>
+          <div class="bls-section">
+            <label for="bls-attestation">Attestation preview</label>
+            <textarea id="bls-attestation" rows="6" readonly placeholder="Compute a Merkle root to populate the attestation JSON."></textarea>
+          </div>
+          <div class="bls-section">
+            <div class="bls-row">
+              <button id="btn-bls-sign" class="primary" type="button">Sign attestation</button>
+              <button id="btn-bls-add-self" type="button">Add my signature to list</button>
+            </div>
+            <textarea id="bls-signature" rows="3" readonly placeholder="Signature (hex) will appear here after signing."></textarea>
+          </div>
+          <div class="bls-section">
+            <div class="bls-row" style="justify-content:space-between;">
+              <span class="small">Collected signatures</span>
+              <button id="btn-bls-clear-signers" class="ghost small" type="button">Clear list</button>
+            </div>
+            <div class="bls-table-wrap">
+              <table class="bls-table" id="bls-signers-table" aria-live="polite">
+                <thead>
+                  <tr>
+                    <th scope="col">Public key</th>
+                    <th scope="col" id="bls-pop-col">PoP</th>
+                    <th scope="col">Signature</th>
+                    <th scope="col" class="bls-actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bls-signers-body">
+                  <tr data-empty>
+                    <td colspan="4">No signatures collected yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="bls-row bls-add-row">
+              <input id="bls-add-pk" placeholder="Public key (hex)" />
+              <input id="bls-add-pop" placeholder="PoP (hex)" />
+              <input id="bls-add-sig" placeholder="Signature (hex)" />
+              <button id="btn-bls-add-row" type="button">Add row</button>
+            </div>
+          </div>
+          <div class="bls-section">
+            <div class="bls-row">
+              <button id="btn-bls-aggregate" type="button">Aggregate &amp; Verify</button>
+            </div>
+            <textarea id="bls-aggregate-sig" rows="3" readonly placeholder="Aggregate signature (hex) will appear here after verification."></textarea>
+            <div class="bls-verify-status" id="bls-aggregate-status" aria-live="polite"></div>
+            <div class="bls-row">
+              <button id="btn-bls-copy-payload" type="button">Copy attestation+signatures JSON</button>
+              <button id="btn-bls-copy-aggregate" type="button">Copy aggregate signature</button>
+            </div>
+            <div class="bls-note small">
+              <span aria-hidden="true">🔒</span>
+              <span>BLS aggregation lets multiple people co-sign the same root; any tampering flips verification.</span>
+              <span class="tooltip" role="presentation">
+                <button class="tooltip-icon" type="button" aria-label="BLS draft reference">i</button>
+                <span class="tooltip-content"><p>Built on draft-irtf-cfrg-bls-signature. Aggregate signatures stay 96 bytes even as collaborators grow.</p><a class="link" href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-bls-signature/" target="_blank" rel="noopener">Read the draft →</a></span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="step" id="step-4" open>
+        <summary>
+          <span>Step 4 — Publish &amp; Share</span>
+          <button class="step-help" type="button" data-help="help-step-4" aria-label="Explain publishing the root">?</button>
+        </summary>
+        <div class="step-body">
+          <div class="step-helptext" id="help-step-4">Share the Merkle root (and proof, if needed) with your team. Anyone can recompute the root locally and confirm it matches.</div>
           <p>Post the root where others can see (e.g. Slack).</p>
           <div class="actions">
             <button id="btn-slack">Compose Slack message</button>
@@ -542,13 +665,13 @@ body.modal-open{overflow:hidden;}
         </div>
       </details>
 
-      <details class="step" id="step-4" open>
+      <details class="step" id="step-5" open>
         <summary>
-          <span>Step 4 — Verify Record</span>
-          <button class="step-help" type="button" data-help="help-step-4" aria-label="Explain verification">?</button>
+          <span>Step 5 — Verify Record</span>
+          <button class="step-help" type="button" data-help="help-step-5" aria-label="Explain verification">?</button>
         </summary>
         <div class="step-body">
-          <div class="step-helptext" id="help-step-4">Verification recomputes the fingerprint from your minutes and checks it against an expected root. Matching roots confirm no changes were made.</div>
+          <div class="step-helptext" id="help-step-5">Verification recomputes the fingerprint from your minutes and checks it against an expected root. Matching roots confirm no changes were made.</div>
           <p>Recompute from JSON and compare to an expected root.</p>
           <div class="actions row">
             <input id="expected-root" placeholder="Expected root (hex)" aria-label="Expected root" />
@@ -557,13 +680,13 @@ body.modal-open{overflow:hidden;}
         </div>
       </details>
 
-      <details class="step" id="step-5" open>
+      <details class="step" id="step-6" open>
         <summary>
-          <span>Step 5 — Generate Proof</span>
-          <button class="step-help" type="button" data-help="help-step-5" aria-label="Explain membership proofs">?</button>
+          <span>Step 6 — Generate Proof</span>
+          <button class="step-help" type="button" data-help="help-step-6" aria-label="Explain membership proofs">?</button>
         </summary>
         <div class="step-body">
-          <div class="step-helptext" id="help-step-5">A membership proof lets you show one agenda item was part of the meeting without revealing the rest of the notes.</div>
+          <div class="step-helptext" id="help-step-6">A membership proof lets you show one agenda item was part of the meeting without revealing the rest of the notes.</div>
           <p>Select an agenda item (radio list beside the minutes) to generate its inclusion proof.</p>
           <div class="actions row" style="margin-top:6px">
             <input id="proof-index" placeholder="Item index (0-based)" aria-label="Item index (optional)" />
@@ -576,13 +699,13 @@ body.modal-open{overflow:hidden;}
         </div>
       </details>
 
-      <details class="step" id="step-6" open>
+      <details class="step" id="step-7" open>
         <summary>
-          <span>Step 6 — Verify Proof</span>
-          <button class="step-help" type="button" data-help="help-step-6" aria-label="Explain proof verification">?</button>
+          <span>Step 7 — Verify Proof</span>
+          <button class="step-help" type="button" data-help="help-step-7" aria-label="Explain proof verification">?</button>
         </summary>
         <div class="step-body">
-          <div class="step-helptext" id="help-step-6">Proof verification replays the Merkle path to ensure the proof matches the root you trust. If any hash or ordering is wrong, verification fails.</div>
+          <div class="step-helptext" id="help-step-7">Proof verification replays the Merkle path to ensure the proof matches the root you trust. If any hash or ordering is wrong, verification fails.</div>
           <p>Check a membership proof against the root.</p>
           <div class="actions">
             <button id="btn-verify-proof">Verify Proof</button>
@@ -722,6 +845,30 @@ body.modal-open{overflow:hidden;}
   const btnSlackCopy = document.getElementById('btn-slack-copy');
   const btnProofCopy = document.getElementById('btn-proof-copy');
   const btnProofDownload = document.getElementById('btn-proof-download');
+  const blsModeRadios = document.querySelectorAll('input[name="bls-mode"]');
+  const blsSkInput = document.getElementById('bls-sk');
+  const blsPkInput = document.getElementById('bls-pk');
+  const blsPopSection = document.getElementById('bls-pop-section');
+  const blsPopInput = document.getElementById('bls-pop');
+  const blsAttestationTextarea = document.getElementById('bls-attestation');
+  const blsSignatureTextarea = document.getElementById('bls-signature');
+  const blsAggregateTextarea = document.getElementById('bls-aggregate-sig');
+  const blsAggregateStatus = document.getElementById('bls-aggregate-status');
+  const blsSignersTable = document.getElementById('bls-signers-table');
+  const blsSignersBody = document.getElementById('bls-signers-body');
+  const blsPopHeader = document.getElementById('bls-pop-col');
+  const blsAddPkInput = document.getElementById('bls-add-pk');
+  const blsAddPopInput = document.getElementById('bls-add-pop');
+  const blsAddSigInput = document.getElementById('bls-add-sig');
+  const btnBlsGenerateSk = document.getElementById('btn-bls-generate-sk');
+  const btnBlsGeneratePop = document.getElementById('btn-bls-generate-pop');
+  const btnBlsSign = document.getElementById('btn-bls-sign');
+  const btnBlsAddSelf = document.getElementById('btn-bls-add-self');
+  const btnBlsAddRow = document.getElementById('btn-bls-add-row');
+  const btnBlsAggregate = document.getElementById('btn-bls-aggregate');
+  const btnBlsCopyPayload = document.getElementById('btn-bls-copy-payload');
+  const btnBlsCopyAggregate = document.getElementById('btn-bls-copy-aggregate');
+  const btnBlsClearSigners = document.getElementById('btn-bls-clear-signers');
   const exampleOverlay = document.getElementById('example-overlay');
   const exampleGrid = document.getElementById('example-grid');
   const btnExampleClose = document.getElementById('btn-example-close');
@@ -801,6 +948,289 @@ body.modal-open{overflow:hidden;}
 
   async function hashUtf8(text) {
     return hashBytes(encoder.encode(text));
+  }
+
+  const BLS_CONTEXT = 'merkle-meet/v1';
+  const BLS_PREFIX = 'MM-ATTESTATION-V1\n';
+  const BLS_MODES = { AUG: 'aug', POP: 'pop' };
+
+  let blsInitPromise = null;
+  let blsProvider = null;
+  let blsProviderName = null;
+
+  function normalizeHex(hex) {
+    return (hex || '').trim().toLowerCase();
+  }
+
+  function ensureUint8Array(value, label) {
+    if (value instanceof Uint8Array) {
+      return value;
+    }
+    if (ArrayBuffer.isView(value)) {
+      return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+    }
+    if (value instanceof ArrayBuffer) {
+      return new Uint8Array(value);
+    }
+    if (Array.isArray(value)) {
+      return Uint8Array.from(value);
+    }
+    throw new Error(`${label} must be bytes`);
+  }
+
+  function assertBytesLength(bytes, expected, label) {
+    if (bytes.length !== expected) {
+      throw new Error(`${label} must be ${expected} bytes`);
+    }
+  }
+
+  async function loadChainsafeBls() {
+    const mod = await import('https://esm.sh/@chainsafe/bls@8.2.0/herumi');
+    const bls = mod?.default ?? mod;
+    if (!bls) {
+      return null;
+    }
+    if (typeof bls.init === 'function') {
+      await bls.init(bls.BLS12_381);
+    } else if (typeof bls.initBLS === 'function') {
+      await bls.initBLS();
+    }
+    return {
+      name: 'chainsafe',
+      getPublicKey: (sk) => bls.getPublicKey(sk),
+      sign: (sk, msg) => bls.sign(msg, sk),
+      verify: (pk, msg, sig) => bls.verify(sig, msg, pk),
+      aggregateSignatures: (sigs) => bls.aggregateSignatures(sigs),
+      aggregateVerify: (pks, msgs, aggSig) => bls.aggregateVerify(pks, msgs, aggSig),
+      fastAggregateVerify: (pks, msg, aggSig) => bls.fastAggregateVerify(pks, msg, aggSig),
+      popProve: typeof bls.popProve === 'function' ? (sk) => bls.popProve(sk) : null,
+      popVerify: typeof bls.popVerify === 'function' ? (pk, proof) => bls.popVerify(pk, proof) : null,
+    };
+  }
+
+  async function loadNobleBls() {
+    const mod = await import('https://esm.sh/@noble/curves@1.4.0/bls12-381.js');
+    const noble = mod?.bls12_381;
+    if (!noble) {
+      return null;
+    }
+    return {
+      name: 'noble',
+      getPublicKey: (sk) => noble.getPublicKey(sk),
+      sign: (sk, msg) => noble.sign(msg, sk),
+      verify: (pk, msg, sig) => noble.verify(sig, msg, pk),
+      aggregateSignatures: (sigs) => noble.aggregateSignatures(sigs),
+      aggregateVerify: (pks, msgs, aggSig) => noble.aggregateVerify(pks, msgs, aggSig),
+      fastAggregateVerify: (pks, msg, aggSig) => noble.fastAggregateVerify(pks, msg, aggSig),
+      popProve: typeof noble.popProve === 'function' ? (sk) => noble.popProve(sk) : null,
+      popVerify: typeof noble.popVerify === 'function' ? (pk, proof) => noble.popVerify(pk, proof) : null,
+    };
+  }
+
+  function wrapBlsProvider(base) {
+    if (!base) {
+      return null;
+    }
+    return {
+      name: base.name,
+      getPublicKey: async (skBytes) => ensureUint8Array(await base.getPublicKey(skBytes), 'public key'),
+      sign: async (skBytes, msgBytes) => ensureUint8Array(await base.sign(skBytes, msgBytes), 'signature'),
+      verify: async (pkBytes, msgBytes, sigBytes) => Boolean(await base.verify(pkBytes, msgBytes, sigBytes)),
+      aggregateSignatures: async (signatures) => ensureUint8Array(await base.aggregateSignatures(signatures), 'aggregate signature'),
+      aggregateVerify: async (publicKeys, messages, aggregateSignature) => Boolean(await base.aggregateVerify(publicKeys, messages, aggregateSignature)),
+      fastAggregateVerify: async (publicKeys, message, aggregateSignature) => Boolean(await base.fastAggregateVerify(publicKeys, message, aggregateSignature)),
+      popProve: base.popProve ? async (skBytes) => ensureUint8Array(await base.popProve(skBytes), 'proof-of-possession') : null,
+      popVerify: base.popVerify ? async (pkBytes, proofBytes) => Boolean(await base.popVerify(pkBytes, proofBytes)) : null,
+    };
+  }
+
+  async function ensureBls() {
+    if (blsProvider) {
+      return blsProvider;
+    }
+    if (blsInitPromise) {
+      return blsInitPromise;
+    }
+    blsInitPromise = (async () => {
+      try {
+        const chainsafe = wrapBlsProvider(await loadChainsafeBls());
+        if (chainsafe) {
+          blsProviderName = chainsafe.name;
+          return chainsafe;
+        }
+      } catch (error) {
+        console.warn('Chainsafe BLS load failed', error);
+      }
+      const noble = wrapBlsProvider(await loadNobleBls());
+      if (noble) {
+        blsProviderName = noble.name;
+        return noble;
+      }
+      throw new Error('Unable to initialize a BLS library.');
+    })().then((provider) => {
+      blsProvider = provider;
+      return provider;
+    }).catch((error) => {
+      blsInitPromise = null;
+      throw error;
+    });
+    return blsInitPromise;
+  }
+
+  async function pkFromSk(skHex) {
+    const sk = normalizeHex(skHex);
+    const skBytes = hexToBytes(sk);
+    assertBytesLength(skBytes, 32, 'Secret key');
+    const bls = await ensureBls();
+    const pkBytes = await bls.getPublicKey(skBytes);
+    return bytesToHex(pkBytes);
+  }
+
+  async function blsSign(skHex, msg32) {
+    if (!(msg32 instanceof Uint8Array)) {
+      throw new Error('Message must be a 32-byte Uint8Array.');
+    }
+    assertBytesLength(msg32, 32, 'Message');
+    const skBytes = hexToBytes(normalizeHex(skHex));
+    assertBytesLength(skBytes, 32, 'Secret key');
+    const bls = await ensureBls();
+    const sigBytes = await bls.sign(skBytes, msg32);
+    return bytesToHex(sigBytes);
+  }
+
+  async function blsVerify(pkHex, msg32, sigHex) {
+    if (!(msg32 instanceof Uint8Array)) {
+      throw new Error('Message must be a 32-byte Uint8Array.');
+    }
+    assertBytesLength(msg32, 32, 'Message');
+    const pkBytes = hexToBytes(normalizeHex(pkHex));
+    const sigBytes = hexToBytes(normalizeHex(sigHex));
+    const bls = await ensureBls();
+    return bls.verify(pkBytes, msg32, sigBytes);
+  }
+
+  async function blsAggregateSigs(sigHexArray) {
+    if (!Array.isArray(sigHexArray) || sigHexArray.length === 0) {
+      throw new Error('Provide at least one signature to aggregate.');
+    }
+    const bls = await ensureBls();
+    const signatures = sigHexArray.map((sig) => hexToBytes(normalizeHex(sig)));
+    const aggregate = await bls.aggregateSignatures(signatures);
+    return bytesToHex(aggregate);
+  }
+
+  async function computeAugmentedMessage(pkBytes, digest32) {
+    assertBytesLength(digest32, 32, 'Attestation digest');
+    const combined = new Uint8Array(pkBytes.length + digest32.length);
+    combined.set(pkBytes, 0);
+    combined.set(digest32, pkBytes.length);
+    return hashBytes(combined);
+  }
+
+  async function blsAggregateVerifyAug(pkHexArray, digest32, sigHexArray) {
+    if (!Array.isArray(pkHexArray) || !Array.isArray(sigHexArray) || pkHexArray.length !== sigHexArray.length) {
+      throw new Error('Mismatch between signer public keys and signatures.');
+    }
+    if (!(digest32 instanceof Uint8Array)) {
+      throw new Error('Digest must be a Uint8Array.');
+    }
+    assertBytesLength(digest32, 32, 'Attestation digest');
+    const bls = await ensureBls();
+    const publicKeys = pkHexArray.map((pk) => hexToBytes(normalizeHex(pk)));
+    const signatures = sigHexArray.map((sig) => hexToBytes(normalizeHex(sig)));
+    const messages = [];
+    for (let i = 0; i < publicKeys.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      messages.push(await computeAugmentedMessage(publicKeys[i], digest32));
+    }
+    const aggregate = await bls.aggregateSignatures(signatures);
+    const ok = await bls.aggregateVerify(publicKeys, messages, aggregate);
+    return { ok, aggregate: bytesToHex(aggregate) };
+  }
+
+  async function blsFastAggregateVerifyPop(pkHexArray, digest32, aggSigHex) {
+    if (!Array.isArray(pkHexArray) || pkHexArray.length === 0) {
+      throw new Error('Provide at least one public key.');
+    }
+    if (!(digest32 instanceof Uint8Array)) {
+      throw new Error('Digest must be a Uint8Array.');
+    }
+    assertBytesLength(digest32, 32, 'Attestation digest');
+    const bls = await ensureBls();
+    const publicKeys = pkHexArray.map((pk) => hexToBytes(normalizeHex(pk)));
+    const aggregateSig = hexToBytes(normalizeHex(aggSigHex));
+    return bls.fastAggregateVerify(publicKeys, digest32, aggregateSig);
+  }
+
+  async function blsPopProve(skHex) {
+    const bls = await ensureBls();
+    if (!bls.popProve) {
+      throw new Error('Proof-of-possession helpers unavailable in this BLS build.');
+    }
+    const skBytes = hexToBytes(normalizeHex(skHex));
+    assertBytesLength(skBytes, 32, 'Secret key');
+    const proofBytes = await bls.popProve(skBytes);
+    return bytesToHex(proofBytes);
+  }
+
+  async function blsPopVerify(pkHex, popHex) {
+    const bls = await ensureBls();
+    if (!bls.popVerify) {
+      throw new Error('Proof-of-possession helpers unavailable in this BLS build.');
+    }
+    const pkBytes = hexToBytes(normalizeHex(pkHex));
+    const popBytes = hexToBytes(normalizeHex(popHex));
+    return bls.popVerify(pkBytes, popBytes);
+  }
+
+  function buildAttestationPayload(meeting, merkleRoot, mode) {
+    if (!meeting || !meeting.meeting_id || !meeting.timestamp || !merkleRoot) {
+      return null;
+    }
+    const root = normalizeHex(merkleRoot);
+    if (!/^[0-9a-f]{64}$/.test(root)) {
+      throw new Error('Merkle root must be a 32-byte hex string.');
+    }
+    const aggMode = mode === BLS_MODES.POP ? BLS_MODES.POP : BLS_MODES.AUG;
+    return {
+      context: BLS_CONTEXT,
+      meeting_id: meeting.meeting_id,
+      timestamp: meeting.timestamp,
+      merkle_root: root,
+      hash_alg: 'SHA-256',
+      sig_scheme: 'BLS',
+      agg_scheme: aggMode,
+    };
+  }
+
+  function attestationToCanonicalJson(attestation) {
+    if (!attestation) {
+      return '';
+    }
+    const ordered = {
+      context: attestation.context,
+      meeting_id: attestation.meeting_id,
+      timestamp: attestation.timestamp,
+      merkle_root: attestation.merkle_root,
+      hash_alg: attestation.hash_alg,
+      sig_scheme: attestation.sig_scheme,
+      agg_scheme: attestation.agg_scheme,
+    };
+    return JSON.stringify(ordered);
+  }
+
+  async function computeAttestationDigest(attestation) {
+    if (!attestation) {
+      throw new Error('No attestation to hash.');
+    }
+    const canonical = attestationToCanonicalJson(attestation);
+    // Domain separation keeps signatures scoped to Merkle-Meet attestations.
+    const prefixBytes = encoder.encode(BLS_PREFIX);
+    const bodyBytes = encoder.encode(canonical);
+    const input = new Uint8Array(prefixBytes.length + bodyBytes.length);
+    input.set(prefixBytes, 0);
+    input.set(bodyBytes, prefixBytes.length);
+    return hashBytes(input);
   }
 
   async function hashLeaf(item, salt) {
@@ -1232,6 +1662,7 @@ body.modal-open{overflow:hidden;}
       stepLog('Step 2', `ROOT = ${result.root} (hex)`, 'ok');
       rootCode.textContent = result.root;
       latestMeeting = result;
+      await refreshAttestationPreview();
       setIntegrity('ok', 'Root computed');
       updateAgendaList();
       return result;
@@ -1248,11 +1679,11 @@ body.modal-open{overflow:hidden;}
       return null;
     }
     if (!Number.isInteger(index) || index < 0) {
-      stepLog('Step 5', 'Select an agenda item first (use the radio list).', 'bad');
+      stepLog('Step 6', 'Select an agenda item first (use the radio list).', 'bad');
       return null;
     }
     if (!Array.isArray(meetingData.items) || index >= meetingData.items.length) {
-      stepLog('Step 5', 'Item index is out of bounds for the current minutes.', 'bad');
+      stepLog('Step 6', 'Item index is out of bounds for the current minutes.', 'bad');
       return null;
     }
     const api = resolveApi();
@@ -1264,7 +1695,7 @@ body.modal-open{overflow:hidden;}
       const salt = saltInput.value.trim() || meetingData.salt || undefined;
       const result = await api.generateProof(meetingData, index, { salt });
       const agenda = meetingData.items[index]?.agenda ?? `Item #${index}`;
-      stepLog('Step 5', `Generated proof for “${agenda}” (path length = ${result.pathLength})`, 'ok');
+      stepLog('Step 6', `Generated proof for “${agenda}” (path length = ${result.pathLength})`, 'ok');
       out.value = JSON.stringify(result.document, null, 2);
       latestProofDocument = result.document;
       selectedProofIndex = index;
@@ -1272,7 +1703,7 @@ body.modal-open{overflow:hidden;}
       updateAgendaList();
       return result;
     } catch (error) {
-      stepLog('Step 5', `generateProof failed: ${error.message || error}`, 'bad');
+      stepLog('Step 6', `generateProof failed: ${error.message || error}`, 'bad');
       return null;
     }
   }
@@ -1287,19 +1718,19 @@ body.modal-open{overflow:hidden;}
       const result = await api.verifyProof(proofDoc, expectedRoot);
       if (result.valid) {
         setIntegrity('ok', 'Proof verified');
-        stepLog('Step 6', 'Proof matches the expected root', 'ok');
+        stepLog('Step 7', 'Proof matches the expected root', 'ok');
         if (addSummary && proofDoc?.item) {
           const summary = `This proof shows that “${proofDoc.item.agenda}” was part of meeting ${proofDoc.meeting_id} at ${proofDoc.timestamp}.`;
-          stepLog('Step 6', summary, 'ok');
+          stepLog('Step 7', summary, 'ok');
           out.value = `${JSON.stringify(proofDoc, null, 2)}\n\n${summary}`;
         }
       } else {
         setIntegrity('bad', 'Mismatch vs expected root');
-        stepLog('Step 6', 'Proof did not match the expected root', 'bad');
+        stepLog('Step 7', 'Proof did not match the expected root', 'bad');
       }
       return result;
     } catch (error) {
-      stepLog('Step 6', `verifyProof failed: ${error.message || error}`, 'bad');
+      stepLog('Step 7', `verifyProof failed: ${error.message || error}`, 'bad');
       setIntegrity('bad', 'Proof failed');
       return { valid: false };
     }
@@ -1509,6 +1940,262 @@ body.modal-open{overflow:hidden;}
   let latestMeeting = null;
   let lastTranscriptItemsCount = 0;
   let agendaDebounce;
+  const blsPopCache = new Map();
+  const blsState = {
+    mode: BLS_MODES.AUG,
+    attestation: null,
+    digest: null,
+    canonicalJson: '',
+    signers: [],
+    aggregate: null,
+    lastSignature: null,
+  };
+  let blsBackendLogged = false;
+  let blsPkDeriveTimer;
+
+  function setBlsAggregateStatus(state, message) {
+    if (!blsAggregateStatus) return;
+    blsAggregateStatus.textContent = message || '';
+    blsAggregateStatus.classList.remove('ok', 'bad');
+    if (state === 'ok') {
+      blsAggregateStatus.classList.add('ok');
+    } else if (state === 'bad') {
+      blsAggregateStatus.classList.add('bad');
+    }
+  }
+
+  function clearBlsSignature() {
+    blsState.lastSignature = null;
+    if (blsSignatureTextarea) {
+      blsSignatureTextarea.value = '';
+    }
+  }
+
+  function clearBlsAggregate(resetIntegrity = false) {
+    blsState.aggregate = null;
+    if (blsAggregateTextarea) {
+      blsAggregateTextarea.value = '';
+    }
+    setBlsAggregateStatus(null, '');
+    if (resetIntegrity) {
+      if (latestMeeting?.root) {
+        setIntegrity('ok', 'Root computed');
+      } else {
+        setIntegrity(null);
+      }
+    }
+  }
+
+  function renderBlsSigners() {
+    if (!blsSignersBody) return;
+    blsSignersBody.innerHTML = '';
+    if (blsSignersTable) {
+      blsSignersTable.classList.toggle('has-pop', blsState.mode === BLS_MODES.POP);
+    }
+    if (blsState.mode === BLS_MODES.POP) {
+      blsPopHeader?.removeAttribute('hidden');
+    } else if (blsPopHeader) {
+      blsPopHeader.setAttribute('hidden', 'hidden');
+    }
+    if (!blsState.signers.length) {
+      const row = document.createElement('tr');
+      row.dataset.empty = 'true';
+      const cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.textContent = 'No signatures collected yet.';
+      row.appendChild(cell);
+      blsSignersBody.appendChild(row);
+      return;
+    }
+    blsState.signers.forEach((entry, index) => {
+      const row = document.createElement('tr');
+      const pkCell = document.createElement('td');
+      pkCell.textContent = entry.pk;
+      row.appendChild(pkCell);
+      const popCell = document.createElement('td');
+      popCell.textContent = blsState.mode === BLS_MODES.POP ? (entry.pop || '—') : '—';
+      row.appendChild(popCell);
+      const sigCell = document.createElement('td');
+      sigCell.textContent = entry.sig;
+      row.appendChild(sigCell);
+      const actionCell = document.createElement('td');
+      actionCell.className = 'bls-actions-col';
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = 'Remove';
+      removeButton.addEventListener('click', () => {
+        blsState.signers.splice(index, 1);
+        renderBlsSigners();
+        clearBlsAggregate(true);
+      });
+      actionCell.appendChild(removeButton);
+      row.appendChild(actionCell);
+      blsSignersBody.appendChild(row);
+    });
+  }
+
+  function resetBlsCollections() {
+    blsState.signers = [];
+    blsPopCache.clear();
+    renderBlsSigners();
+    clearBlsAggregate(true);
+    clearBlsSignature();
+  }
+
+  function updateBlsModeUI() {
+    const isPop = blsState.mode === BLS_MODES.POP;
+    if (blsPopSection) {
+      if (isPop) {
+        blsPopSection.removeAttribute('hidden');
+      } else {
+        blsPopSection.setAttribute('hidden', 'hidden');
+        if (blsPopInput) {
+          blsPopInput.value = '';
+        }
+      }
+    }
+    if (blsAddPopInput) {
+      blsAddPopInput.style.display = isPop ? '' : 'none';
+      if (!isPop) {
+        blsAddPopInput.value = '';
+      }
+    }
+    renderBlsSigners();
+  }
+
+  function setBlsMode(mode) {
+    const next = mode === BLS_MODES.POP ? BLS_MODES.POP : BLS_MODES.AUG;
+    if (blsState.mode === next) {
+      return;
+    }
+    blsState.mode = next;
+    updateBlsModeUI();
+    resetBlsCollections();
+    refreshAttestationPreview().catch((error) => {
+      stepLog('Step 3', `Failed to refresh attestation: ${error.message || error}`, 'bad');
+    });
+  }
+
+  function addSignerEntry(entry, { silent = false } = {}) {
+    const pkHex = normalizeHex(entry.pk);
+    const sigHex = normalizeHex(entry.sig);
+    if (!pkHex) {
+      throw new Error('Public key is required.');
+    }
+    if (!sigHex) {
+      throw new Error('Signature is required.');
+    }
+    hexToBytes(pkHex);
+    hexToBytes(sigHex);
+    let popHex = null;
+    if (entry.pop) {
+      popHex = normalizeHex(entry.pop);
+      if (popHex) {
+        hexToBytes(popHex);
+      }
+    }
+    if (blsState.mode === BLS_MODES.POP && !popHex) {
+      throw new Error('Provide a PoP in proof-of-possession mode.');
+    }
+    const payload = popHex ? { pk: pkHex, sig: sigHex, pop: popHex } : { pk: pkHex, sig: sigHex };
+    const existingIndex = blsState.signers.findIndex((item) => item.pk === pkHex);
+    if (existingIndex >= 0) {
+      blsState.signers.splice(existingIndex, 1, payload);
+    } else {
+      blsState.signers.push(payload);
+    }
+    renderBlsSigners();
+    clearBlsAggregate(true);
+    if (!silent) {
+      stepLog('Step 3', `Added signer ${pkHex.slice(0, 8)}…`, 'ok');
+    }
+  }
+
+  async function refreshAttestationPreview() {
+    if (!blsAttestationTextarea) {
+      return;
+    }
+    if (!latestMeeting?.meeting || !latestMeeting.root) {
+      blsState.attestation = null;
+      blsState.digest = null;
+      blsState.canonicalJson = '';
+      blsAttestationTextarea.value = 'Compute a Merkle root to populate the attestation JSON.';
+      resetBlsCollections();
+      return;
+    }
+    try {
+      const attestation = buildAttestationPayload(latestMeeting.meeting, latestMeeting.root, blsState.mode);
+      if (!attestation) {
+        blsState.attestation = null;
+        blsState.digest = null;
+        blsState.canonicalJson = '';
+        blsAttestationTextarea.value = 'Attestation unavailable. Ensure meeting metadata includes meeting_id and timestamp.';
+        resetBlsCollections();
+        return;
+      }
+      const canonical = attestationToCanonicalJson(attestation);
+      blsState.attestation = attestation;
+      blsState.canonicalJson = canonical;
+      blsState.digest = await computeAttestationDigest(attestation);
+      blsAttestationTextarea.value = canonical;
+      resetBlsCollections();
+    } catch (error) {
+      blsState.attestation = null;
+      blsState.digest = null;
+      blsState.canonicalJson = '';
+      blsAttestationTextarea.value = `Attestation error: ${error.message || error}`;
+      resetBlsCollections();
+    }
+  }
+
+  async function ensurePublicKey({ emitError = false } = {}) {
+    if (blsPkInput) {
+      const existing = normalizeHex(blsPkInput.value);
+      if (existing) {
+        return existing;
+      }
+    }
+    const skHex = normalizeHex(blsSkInput?.value);
+    if (skHex.length !== 64) {
+      if (emitError) {
+        stepLog('Step 3', 'Provide a 32-byte secret key first.', 'bad');
+      }
+      return null;
+    }
+    try {
+      const pkHex = await pkFromSk(skHex);
+      if (blsPkInput) {
+        blsPkInput.value = pkHex;
+      }
+      return pkHex;
+    } catch (error) {
+      if (emitError) {
+        stepLog('Step 3', `Failed to derive public key: ${error.message || error}`, 'bad');
+      }
+      return null;
+    }
+  }
+
+  function schedulePublicKeyDerive() {
+    if (!blsSkInput) {
+      return;
+    }
+    clearTimeout(blsPkDeriveTimer);
+    blsPkDeriveTimer = setTimeout(() => {
+      const skHex = normalizeHex(blsSkInput.value);
+      if (skHex.length === 64) {
+        ensurePublicKey().catch(() => {});
+      }
+    }, 240);
+  }
+
+  async function ensureBlsBackendLogged() {
+    await ensureBls();
+    if (!blsBackendLogged && blsProviderName) {
+      stepLog('Step 3', `Loaded ${blsProviderName} BLS backend`, 'ok');
+      blsBackendLogged = true;
+    }
+  }
 
   stepHelpButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -1590,6 +2277,13 @@ body.modal-open{overflow:hidden;}
     selectedProofIndex = 0;
     updateAgendaList();
     resetFeedChecklist();
+    blsState.attestation = null;
+    blsState.digest = null;
+    blsState.canonicalJson = '';
+    if (blsAttestationTextarea) {
+      blsAttestationTextarea.value = 'Compute a Merkle root to populate the attestation JSON.';
+    }
+    resetBlsCollections();
     setIntegrity(null);
     stepLog('Step 1', 'Cleared minutes and outputs', 'ok');
   });
@@ -1609,6 +2303,13 @@ body.modal-open{overflow:hidden;}
     agendaDebounce = setTimeout(() => {
       updateAgendaList();
     }, 250);
+    blsState.attestation = null;
+    blsState.digest = null;
+    blsState.canonicalJson = '';
+    if (blsAttestationTextarea) {
+      blsAttestationTextarea.value = 'Compute a Merkle root to populate the attestation JSON.';
+    }
+    resetBlsCollections();
     setIntegrity(null);
   });
 
@@ -1623,21 +2324,21 @@ body.modal-open{overflow:hidden;}
     }
     const root = rootCode.textContent;
     if (!root || root === '—') {
-      stepLog('Step 3', 'Compute a root before composing the Slack message.', 'bad');
+      stepLog('Step 4', 'Compute a root before composing the Slack message.', 'bad');
       return;
     }
     const message = prepareSlackMessage(meeting, root);
     out.value = message;
-    stepLog('Step 3', 'Slack message prepared', 'ok');
+    stepLog('Step 4', 'Slack message prepared', 'ok');
   });
 
   btnSlackCopy?.addEventListener('click', () => {
     if (!out.value.trim()) {
-      stepLog('Step 3', 'Compose a Slack message first', 'bad');
+      stepLog('Step 4', 'Compose a Slack message first', 'bad');
       return;
     }
     copy(out.value);
-    stepLog('Step 3', 'Slack message copied to clipboard', 'ok');
+    stepLog('Step 4', 'Slack message copied to clipboard', 'ok');
   });
 
   btnVerifyRoot?.addEventListener('click', async () => {
@@ -1647,7 +2348,7 @@ body.modal-open{overflow:hidden;}
     }
     const expected = expectedRootInput.value.trim();
     if (!expected) {
-      stepLog('Step 4', 'Enter an expected root to compare against.', 'bad');
+      stepLog('Step 5', 'Enter an expected root to compare against.', 'bad');
       return;
     }
     const api = resolveApi();
@@ -1658,11 +2359,13 @@ body.modal-open{overflow:hidden;}
     try {
       const salt = saltInput.value.trim() || data.salt || undefined;
       const result = await api.verifyRoot(data, expected, { salt });
-      stepLog('Step 4', result.match ? 'Root matches the expected value' : 'Root mismatch detected', result.match ? 'ok' : 'bad');
+      stepLog('Step 5', result.match ? 'Root matches the expected value' : 'Root mismatch detected', result.match ? 'ok' : 'bad');
       rootCode.textContent = result.computedRoot;
+      latestMeeting = Object.assign({}, result, { root: result.computedRoot });
+      await refreshAttestationPreview();
       setIntegrity(result.match ? 'ok' : 'bad', result.match ? 'Root matches expected root' : 'Mismatch vs expected root');
     } catch (error) {
-      stepLog('Step 4', `verifyRoot failed: ${error.message || error}`, 'bad');
+      stepLog('Step 5', `verifyRoot failed: ${error.message || error}`, 'bad');
       setIntegrity('bad', 'Verification failed');
     }
   });
@@ -1670,7 +2373,7 @@ body.modal-open{overflow:hidden;}
   btnProof?.addEventListener('click', () => {
     const index = getDesiredProofIndex();
     if (index === null) {
-      stepLog('Step 5', 'Select an agenda item from the list or enter an index.', 'bad');
+      stepLog('Step 6', 'Select an agenda item from the list or enter an index.', 'bad');
       return;
     }
     generateProofFlow(index);
@@ -1678,21 +2381,21 @@ body.modal-open{overflow:hidden;}
 
   btnProofCopy?.addEventListener('click', () => {
     if (!latestProofDocument) {
-      stepLog('Step 5', 'Generate a proof before copying.', 'bad');
+      stepLog('Step 6', 'Generate a proof before copying.', 'bad');
       return;
     }
     copy(JSON.stringify(latestProofDocument, null, 2));
-    stepLog('Step 5', 'Proof JSON copied to clipboard', 'ok');
+    stepLog('Step 6', 'Proof JSON copied to clipboard', 'ok');
   });
 
   btnProofDownload?.addEventListener('click', () => {
     if (!latestProofDocument) {
-      stepLog('Step 5', 'Generate a proof before downloading.', 'bad');
+      stepLog('Step 6', 'Generate a proof before downloading.', 'bad');
       return;
     }
     const fileName = `${(latestProofDocument.meeting_id || 'meeting').replace(/[^a-z0-9\-]+/gi, '_')}-proof.json`;
     downloadJsonFile(fileName, JSON.stringify(latestProofDocument, null, 2));
-    stepLog('Step 5', 'Downloaded proof.json', 'ok');
+    stepLog('Step 6', 'Downloaded proof.json', 'ok');
   });
 
   btnTryIt?.addEventListener('click', () => {
@@ -1704,9 +2407,9 @@ body.modal-open{overflow:hidden;}
     let proof;
     try {
       proof = JSON.parse(out.value);
-      stepLog('Step 6', 'Parsed proof JSON', 'ok');
+      stepLog('Step 7', 'Parsed proof JSON', 'ok');
     } catch (error) {
-      stepLog('Step 6', 'Paste a proof JSON into Output first.', 'bad');
+      stepLog('Step 7', 'Paste a proof JSON into Output first.', 'bad');
       return;
     }
     latestProofDocument = proof;
@@ -1930,10 +2633,262 @@ body.modal-open{overflow:hidden;}
         const step6 = document.getElementById('step-6');
         if (step5) step5.open = true;
         if (step6) step6.open = true;
-        stepLog('Step 5', 'Auto-generated proof for the first item from transcript', 'ok');
+        stepLog('Step 6', 'Auto-generated proof for the first item from transcript', 'ok');
       }
     }
   });
+
+  blsModeRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (!radio.checked) {
+        return;
+      }
+      setBlsMode(radio.value);
+      const label = radio.value === BLS_MODES.POP ? 'Aggregation mode → PoP' : 'Aggregation mode → Augmentation';
+      stepLog('Step 3', label, 'ok');
+    });
+  });
+
+  btnBlsGenerateSk?.addEventListener('click', async () => {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const skHex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    if (blsSkInput) {
+      blsSkInput.value = skHex;
+    }
+    try {
+      const pkHex = await pkFromSk(skHex);
+      if (blsPkInput) {
+        blsPkInput.value = pkHex;
+      }
+      stepLog('Step 3', 'Generated demo-only secret/public key pair', 'ok');
+    } catch (error) {
+      stepLog('Step 3', `Key derivation failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  blsSkInput?.addEventListener('input', () => {
+    schedulePublicKeyDerive();
+  });
+
+  btnBlsGeneratePop?.addEventListener('click', async () => {
+    if (blsState.mode !== BLS_MODES.POP) {
+      stepLog('Step 3', 'Switch to PoP mode to generate a proof.', 'bad');
+      return;
+    }
+    const skHex = normalizeHex(blsSkInput?.value);
+    if (skHex.length !== 64) {
+      stepLog('Step 3', 'Provide a 32-byte secret key first.', 'bad');
+      return;
+    }
+    try {
+      await ensureBlsBackendLogged();
+      const popHex = await blsPopProve(skHex);
+      if (blsPopInput) {
+        blsPopInput.value = popHex;
+      }
+      const pkHex = await pkFromSk(skHex);
+      if (blsPkInput) {
+        blsPkInput.value = pkHex;
+      }
+      stepLog('Step 3', 'Generated proof-of-possession', 'ok');
+    } catch (error) {
+      stepLog('Step 3', `PoP generation failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnBlsSign?.addEventListener('click', async () => {
+    if (!blsState.attestation || !blsState.digest) {
+      stepLog('Step 3', 'Compute the Merkle root first.', 'bad');
+      return;
+    }
+    const skHex = normalizeHex(blsSkInput?.value);
+    if (skHex.length !== 64) {
+      stepLog('Step 3', 'Provide a 32-byte secret key.', 'bad');
+      return;
+    }
+    try {
+      const pkHex = await ensurePublicKey({ emitError: true });
+      if (!pkHex) {
+        return;
+      }
+      await ensureBlsBackendLogged();
+      let msg;
+      if (blsState.mode === BLS_MODES.AUG) {
+        const pkBytes = hexToBytes(pkHex);
+        msg = await computeAugmentedMessage(pkBytes, blsState.digest);
+      } else {
+        msg = blsState.digest;
+      }
+      const sigHex = await blsSign(skHex, msg);
+      if (blsSignatureTextarea) {
+        blsSignatureTextarea.value = sigHex;
+      }
+      blsState.lastSignature = {
+        pk: pkHex,
+        sig: sigHex,
+        pop: blsState.mode === BLS_MODES.POP ? normalizeHex(blsPopInput?.value) || undefined : undefined,
+      };
+      const byteLength = sigHex.length / 2;
+      stepLog('Step 3', `Signed attestation (${byteLength}-byte BLS)`, 'ok');
+    } catch (error) {
+      stepLog('Step 3', `Signing failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnBlsAddSelf?.addEventListener('click', () => {
+    if (!blsState.lastSignature) {
+      stepLog('Step 3', 'Sign the attestation before adding it to the list.', 'bad');
+      return;
+    }
+    try {
+      const payload = {
+        pk: blsState.lastSignature.pk,
+        sig: blsState.lastSignature.sig,
+        pop: blsState.mode === BLS_MODES.POP ? normalizeHex(blsPopInput?.value || blsState.lastSignature.pop || '') : undefined,
+      };
+      if (blsState.mode === BLS_MODES.POP && !payload.pop) {
+        stepLog('Step 3', 'Generate your PoP before adding to the list.', 'bad');
+        return;
+      }
+      addSignerEntry(payload, { silent: true });
+      stepLog('Step 3', 'Added your signature to the list', 'ok');
+    } catch (error) {
+      stepLog('Step 3', `Could not add signature: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnBlsAddRow?.addEventListener('click', () => {
+    try {
+      const payload = {
+        pk: blsAddPkInput?.value,
+        sig: blsAddSigInput?.value,
+      };
+      if (blsState.mode === BLS_MODES.POP) {
+        payload.pop = blsAddPopInput?.value;
+      }
+      addSignerEntry(payload);
+      if (blsAddPkInput) blsAddPkInput.value = '';
+      if (blsAddSigInput) blsAddSigInput.value = '';
+      if (blsAddPopInput) blsAddPopInput.value = '';
+    } catch (error) {
+      stepLog('Step 3', `Could not add signer: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnBlsClearSigners?.addEventListener('click', () => {
+    blsState.signers = [];
+    renderBlsSigners();
+    clearBlsAggregate(true);
+    stepLog('Step 3', 'Cleared collected signatures', 'ok');
+  });
+
+  btnBlsAggregate?.addEventListener('click', async () => {
+    if (!blsState.attestation || !blsState.digest) {
+      stepLog('Step 3', 'Compute the Merkle root first.', 'bad');
+      return;
+    }
+    if (!blsState.signers.length) {
+      stepLog('Step 3', 'Collect signatures before aggregating.', 'bad');
+      return;
+    }
+    try {
+      await ensureBlsBackendLogged();
+      const pkList = blsState.signers.map((entry) => entry.pk);
+      const signatures = blsState.signers.map((entry) => entry.sig);
+      if (blsState.mode === BLS_MODES.POP) {
+        for (const entry of blsState.signers) {
+          if (!entry.pop) {
+            stepLog('Step 3', 'All signers need a PoP in proof-of-possession mode.', 'bad');
+            setBlsAggregateStatus('bad', 'Missing proof-of-possession');
+            setIntegrity('bad', 'PoP missing');
+            return;
+          }
+        }
+        for (const entry of blsState.signers) {
+          const cacheKey = `${entry.pk}:${entry.pop}`;
+          if (!blsPopCache.get(cacheKey)) {
+            // eslint-disable-next-line no-await-in-loop
+            const valid = await blsPopVerify(entry.pk, entry.pop);
+            if (!valid) {
+              stepLog('Step 3', `Invalid PoP for ${entry.pk.slice(0, 8)}…`, 'bad');
+              setBlsAggregateStatus('bad', 'Invalid PoP');
+              setIntegrity('bad', 'Invalid PoP');
+              return;
+            }
+            blsPopCache.set(cacheKey, true);
+          }
+        }
+        const aggregateHex = await blsAggregateSigs(signatures);
+        stepLog('Step 3', `Aggregated ${signatures.length} signatures`, 'ok');
+        const ok = await blsFastAggregateVerifyPop(pkList, blsState.digest, aggregateHex);
+        if (blsAggregateTextarea) {
+          blsAggregateTextarea.value = aggregateHex;
+        }
+        blsState.aggregate = { sig: aggregateHex, valid: ok, mode: blsState.mode, count: signatures.length };
+        setBlsAggregateStatus(ok ? 'ok' : 'bad', ok ? 'FastAggregateVerify → OK' : 'FastAggregateVerify → FAIL');
+        setIntegrity(ok ? 'ok' : 'bad', ok ? 'Aggregate verified' : 'Aggregate verify failed');
+        stepLog('Step 3', ok ? 'FastAggregateVerify → OK' : 'FastAggregateVerify → FAIL', ok ? 'ok' : 'bad');
+        if (!ok) {
+          stepLog('Step 3', 'Aggregate verification failed', 'bad');
+        }
+      } else {
+        const verification = await blsAggregateVerifyAug(pkList, blsState.digest, signatures);
+        if (blsAggregateTextarea) {
+          blsAggregateTextarea.value = verification.aggregate;
+        }
+        blsState.aggregate = { sig: verification.aggregate, valid: verification.ok, mode: blsState.mode, count: signatures.length };
+        setBlsAggregateStatus(verification.ok ? 'ok' : 'bad', verification.ok ? 'AggregateVerify → OK' : 'AggregateVerify → FAIL');
+        setIntegrity(verification.ok ? 'ok' : 'bad', verification.ok ? 'Aggregate verified' : 'Aggregate verify failed');
+        stepLog('Step 3', `Aggregated ${signatures.length} signatures`, 'ok');
+        stepLog('Step 3', verification.ok ? 'AggregateVerify → OK' : 'AggregateVerify → FAIL', verification.ok ? 'ok' : 'bad');
+        if (!verification.ok) {
+          stepLog('Step 3', 'Aggregate verification failed', 'bad');
+        }
+      }
+    } catch (error) {
+      setBlsAggregateStatus('bad', 'Aggregation error');
+      setIntegrity('bad', 'Aggregation error');
+      stepLog('Step 3', `Aggregation failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnBlsCopyPayload?.addEventListener('click', () => {
+    if (!blsState.attestation) {
+      stepLog('Step 3', 'Compute the Merkle root first.', 'bad');
+      return;
+    }
+    const attestationObject = blsState.canonicalJson ? JSON.parse(blsState.canonicalJson) : {};
+    const signersPayload = blsState.signers.map((entry) => {
+      const signer = { pk: entry.pk, sig: entry.sig };
+      if (blsState.mode === BLS_MODES.POP) {
+        signer.pop = entry.pop;
+      }
+      return signer;
+    });
+    const aggregatePayload = blsState.aggregate
+      ? { sig: blsState.aggregate.sig, valid: Boolean(blsState.aggregate.valid) }
+      : { sig: '', valid: false };
+    const bundle = {
+      attestation: attestationObject,
+      signers: signersPayload,
+      aggregate: aggregatePayload,
+    };
+    copy(JSON.stringify(bundle, null, 2));
+    stepLog('Step 3', 'Copied attestation bundle to clipboard', 'ok');
+  });
+
+  btnBlsCopyAggregate?.addEventListener('click', () => {
+    if (!blsState.aggregate?.sig) {
+      stepLog('Step 3', 'Aggregate signature not available yet.', 'bad');
+      return;
+    }
+    copy(blsState.aggregate.sig);
+    stepLog('Step 3', 'Aggregate signature copied', 'ok');
+  });
+
+  updateBlsModeUI();
+  renderBlsSigners();
 
   whyLinks.forEach((link) => {
     link.addEventListener('click', (event) => {
