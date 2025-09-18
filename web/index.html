@@ -290,6 +290,48 @@ body.modal-open{overflow:hidden;}
   color:var(--muted);
 }
 
+.example-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(6,12,18,0.78);
+  backdrop-filter:blur(10px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:900;
+}
+
+.example-overlay.open{display:flex;}
+
+.example-dialog{
+  width:min(880px,100%);
+  max-height:88vh;
+  overflow:auto;
+  background:var(--panel);
+  border:var(--line);
+  border-radius:var(--br);
+  padding:20px;
+  box-shadow:0 32px 64px rgba(0,0,0,0.45);
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.example-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.example-dialog h2{margin:0;font-size:16px;letter-spacing:.4px;}
+.example-intro{margin:0;color:var(--muted);font-size:12px;line-height:1.5;}
+.example-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.example-card{border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:10px;}
+.example-card h3{margin:0;font-size:14px;}
+.example-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.5;}
+.example-card footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
+.example-card button{flex:1 1 auto;}
+
+@media (max-width: 720px){
+  .example-grid{grid-template-columns:1fr;}
+}
+
 .salt-row{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
 .salt-tip{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
 .salt-tip button{padding:4px 10px; font-size:11px; border-radius:999px;}
@@ -336,10 +378,23 @@ body.modal-open{overflow:hidden;}
   overflow:auto;
   background:rgba(255,255,255,.02);
 }
-.items-overview label{display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--ink); padding:6px 4px; border-radius:6px; cursor:pointer;}
+.items-overview label{
+  display:grid;
+  grid-template-columns:16px 1fr;
+  gap:10px;
+  align-items:flex-start;
+  font-size:12px;
+  color:var(--ink);
+  padding:8px 6px;
+  border-radius:8px;
+  cursor:pointer;
+  line-height:1.45;
+}
 .items-overview label:hover{background:rgba(255,255,255,.04);}
-.items-overview input[type="radio"]{margin-top:2px;}
-.items-overview .item-notes{display:block; color:var(--muted); font-size:11px; margin-top:2px;}
+.items-overview input[type="radio"]{margin-top:3px;}
+.items-overview .item-body{display:flex; flex-direction:column; gap:2px;}
+.items-overview .item-title{font-weight:600; display:block;}
+.items-overview .item-notes{color:var(--muted); font-size:11px; display:block; line-height:1.4;}
 
 .proof-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
 .feed ul{margin:0;padding-left:18px;}
@@ -616,6 +671,17 @@ body.modal-open{overflow:hidden;}
     </div>
   </div>
 
+  <div class="example-overlay" id="example-overlay" aria-hidden="true">
+    <div class="example-dialog" role="dialog" aria-modal="true" aria-labelledby="examples-title">
+      <header>
+        <h2 id="examples-title">Choose a sample meeting</h2>
+        <button id="btn-example-close" class="ghost" type="button" aria-label="Close examples">×</button>
+      </header>
+      <p class="example-intro">Pick one of the curated Summer of Protocols sessions to populate Step 1, then continue through the flow yourself.</p>
+      <div class="example-grid" id="example-grid" role="list"></div>
+    </div>
+  </div>
+
 <script>
 (() => {
   const encoder = new TextEncoder();
@@ -633,6 +699,9 @@ body.modal-open{overflow:hidden;}
   const btnSlackCopy = document.getElementById('btn-slack-copy');
   const btnProofCopy = document.getElementById('btn-proof-copy');
   const btnProofDownload = document.getElementById('btn-proof-download');
+  const exampleOverlay = document.getElementById('example-overlay');
+  const exampleGrid = document.getElementById('example-grid');
+  const btnExampleClose = document.getElementById('btn-example-close');
 
   function isPlainObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -1063,7 +1132,9 @@ body.modal-open{overflow:hidden;}
       });
 
       const content = document.createElement('div');
+      content.className = 'item-body';
       const title = document.createElement('span');
+      title.className = 'item-title';
       title.textContent = item.agenda || `Item ${index}`;
       const notes = document.createElement('span');
       notes.className = 'item-notes';
@@ -1235,16 +1306,179 @@ body.modal-open{overflow:hidden;}
     URL.revokeObjectURL(url);
   }
 
-  const example = {
-    meeting_id: 'DAO-Council-Meeting-2025-09-17',
-    timestamp: '2025-09-17T14:00:00Z',
-    salt: 'optional-random-string',
-    items: [
-      { agenda: 'Budget Allocation for Q4', notes: 'Allocate 500 DAO tokens to the community fund.' },
-      { agenda: 'Project X Update', notes: 'Reviewed progress; deadline extended to Nov 30.' },
-      { agenda: 'New Member Onboarding', notes: 'Discussed process; no formal resolution.' },
-    ],
-  };
+  const exampleDefaultId = 'protocol-art';
+  const exampleSets = [
+    {
+      id: 'protocol-art',
+      title: 'Protocol Art Salon',
+      summary: 'Foundations of protocol art, historical references, and taxonomy axes.',
+      meeting: {
+        meeting_id: 'Protocol-Art-Salon-2025-09-17',
+        timestamp: '2025-09-17T18:00:00Z',
+        salt: 'sop-demo-protocol-art',
+        items: [
+          { agenda: 'Define protocol art foundations', notes: 'Explored the shift from autographic works to allographic collaborations and the orchestrator role of artists.' },
+          { agenda: 'Historical references', notes: 'Discussed Moholy-Nagy telephone pictures, Sol LeWitt wall drawings, and instruction-driven performance protocols.' },
+          { agenda: 'Digital mediums', notes: 'Covered collaborative canvases, generative AI voice models, and smart-contract choreography as protocol art.' },
+          { agenda: 'Taxonomy axes', notes: 'Mapped atomic→systemic, strict→fluid, and technical→social spectrums for categorizing protocol art.' },
+        ],
+      },
+    },
+    {
+      id: 'protocol-fiction',
+      title: 'Protocol Fiction Workshop',
+      summary: 'Protocol-driven storytelling framework and breakout structure for sci-fi narratives.',
+      meeting: {
+        meeting_id: 'Protocol-Fiction-Workshop-2025-09-17',
+        timestamp: '2025-09-17T16:00:00Z',
+        salt: 'sop-demo-protocol-fiction',
+        items: [
+          { agenda: 'Workshop framing', notes: 'Outlined protocol fiction as shared author-reader conventions plus hierarchy of narrative protocol difficulty.' },
+          { agenda: 'Causal layer analysis', notes: 'Reviewed the four-layer method using “The Golden Elephant” as a case study to connect surface, system, worldview, and myth.' },
+          { agenda: 'Breakout structure', notes: 'Walked through Seed→Root→Flower→Fruit rounds and concepts like neural interface privacy and AI legal houses.' },
+          { agenda: 'Assignments and deliverables', notes: 'Participants to submit a 1,000-word story, documenting AI usage and reflections on co-creation.' },
+        ],
+      },
+    },
+    {
+      id: 'agentic-web',
+      title: 'Agentic Web Trust Protocols',
+      summary: 'Trust frameworks for AI agents plus design gaps and experience layers.',
+      meeting: {
+        meeting_id: 'Agentic-Web-Trust-2025-09-18',
+        timestamp: '2025-09-18T15:00:00Z',
+        salt: 'sop-demo-agentic-web',
+        items: [
+          { agenda: 'Trust frameworks', notes: 'Compared value-based and proof-based trust, plus how technology mediates human relationships.' },
+          { agenda: 'Rise of the agentic web', notes: 'Forecasted billions of autonomous AI agents across governance, finance, healthcare, legal, and education domains.' },
+          { agenda: 'Protocol gaps', notes: 'Highlighted missing behavior verification, misbehavior handling, and cross-platform interoperability for AI agents.' },
+          { agenda: 'Experience design stack', notes: 'Introduced evidence→trust primitives→rituals framework and trust experience dimensions like epistemic verification.' },
+        ],
+      },
+    },
+    {
+      id: 'llm-roleplay',
+      title: 'LLM Role-Playing Lab',
+      summary: 'Protocol studies pipeline with LLM simulations and workshop takeaways.',
+      meeting: {
+        meeting_id: 'LLM-Protocol-Studies-2025-09-16',
+        timestamp: '2025-09-16T17:30:00Z',
+        salt: 'sop-demo-llm-roleplay',
+        items: [
+          { agenda: 'Program overview', notes: 'Martin Harrigan outlined integrating protocol studies into blockchain curricula and workshop goals.' },
+          { agenda: 'Analysis pipeline', notes: 'Reviewed transcription of Summer of Protocols content, embeddings, and clustered concept outputs.' },
+          { agenda: 'Evaluation framework', notes: 'Enumerated ten protocol properties and role-playing workflow for testing defensibility and mortality.' },
+          { agenda: 'Exercise learnings', notes: 'Captured strengths, weaknesses, and participant observations from the LLM simulations.' },
+        ],
+      },
+    },
+  ];
+
+  function closeExampleOverlay() {
+    if (!exampleOverlay) return;
+    exampleOverlay.classList.remove('open');
+    exampleOverlay.setAttribute('aria-hidden', 'true');
+    if (!transcriptOverlay?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  function openExampleOverlay() {
+    if (!exampleOverlay) return;
+    closeTranscriptOverlay();
+    renderExampleCards();
+    exampleOverlay.classList.add('open');
+    exampleOverlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    const defaultButton = document.getElementById(`example-load-${exampleDefaultId}`);
+    defaultButton?.focus();
+  }
+
+  function loadExampleMeeting(meeting, { stepLabel = 'Step 1' } = {}) {
+    jsonBox.value = JSON.stringify(meeting, null, 2);
+    saltInput.value = meeting.salt || '';
+    selectedProofIndex = 0;
+    if (proofIndexInput) {
+      proofIndexInput.value = '';
+    }
+    latestProofDocument = null;
+    latestMeeting = null;
+    rootCode.textContent = '—';
+    out.value = '';
+    resetFeedChecklist();
+    updateAgendaList();
+    if (itemsOverview) {
+      itemsOverview.scrollTop = 0;
+    }
+    setIntegrity(null);
+    stepLog(stepLabel, `Loaded example minutes: ${meeting.meeting_id}`, 'ok');
+    stepLog(stepLabel, 'Next: Step 2 → Compute the Merkle root.', '');
+    closeExampleOverlay();
+  }
+
+  function renderExampleCards() {
+    if (!exampleGrid || exampleGrid.dataset.rendered === 'true') {
+      return;
+    }
+    exampleGrid.innerHTML = '';
+    exampleSets.forEach((entry) => {
+      const card = document.createElement('article');
+      card.className = 'example-card';
+      card.id = `example-card-${entry.id}`;
+      card.setAttribute('role', 'listitem');
+
+      const title = document.createElement('h3');
+      title.textContent = entry.title;
+      const meta = document.createElement('p');
+      meta.className = 'small mono';
+      meta.textContent = `${entry.meeting.meeting_id} • ${entry.meeting.timestamp}`;
+      const summary = document.createElement('p');
+      summary.textContent = entry.summary;
+
+      const agendaPreview = document.createElement('p');
+      agendaPreview.className = 'small';
+      agendaPreview.textContent = entry.meeting.items.slice(0, 2).map((item) => `• ${item.agenda}`).join('   ');
+
+      const footer = document.createElement('footer');
+      const loadButton = document.createElement('button');
+      loadButton.className = 'primary';
+      loadButton.id = `example-load-${entry.id}`;
+      loadButton.type = 'button';
+      loadButton.textContent = 'Load into Step 1';
+      loadButton.addEventListener('click', () => {
+        loadExampleMeeting(entry.meeting, { stepLabel: 'Step 1' });
+      });
+
+      const copyButton = document.createElement('button');
+      copyButton.type = 'button';
+      copyButton.textContent = 'Copy JSON';
+      copyButton.addEventListener('click', () => {
+        copy(JSON.stringify(entry.meeting, null, 2));
+        stepLog('Step 1', `Copied ${entry.meeting.meeting_id} JSON`, 'ok');
+      });
+
+      footer.appendChild(loadButton);
+      footer.appendChild(copyButton);
+
+      card.appendChild(title);
+      card.appendChild(meta);
+      card.appendChild(summary);
+      card.appendChild(agendaPreview);
+      card.appendChild(footer);
+      exampleGrid.appendChild(card);
+    });
+    exampleGrid.dataset.rendered = 'true';
+  }
+
+  btnExampleClose?.addEventListener('click', () => {
+    closeExampleOverlay();
+  });
+
+  exampleOverlay?.addEventListener('click', (event) => {
+    if (event.target === exampleOverlay) {
+      closeExampleOverlay();
+    }
+  });
 
   const stepDetails = Array.from(document.querySelectorAll('.step'));
   const stepHelpButtons = document.querySelectorAll('.step-help');
@@ -1323,14 +1557,7 @@ body.modal-open{overflow:hidden;}
   const transcriptFileInput = document.getElementById('transcript-file');
 
   btnExample?.addEventListener('click', () => {
-    jsonBox.value = JSON.stringify(example, null, 2);
-    saltInput.value = example.salt || '';
-    selectedProofIndex = 0;
-    updateAgendaList();
-    rootCode.textContent = '—';
-    out.value = '';
-    setIntegrity(null);
-    stepLog('Step 1', 'Loaded example minutes', 'ok');
+    openExampleOverlay();
   });
 
   btnClear?.addEventListener('click', () => {
@@ -1446,44 +1673,9 @@ body.modal-open{overflow:hidden;}
     stepLog('Step 5', 'Downloaded proof.json', 'ok');
   });
 
-  btnTryIt?.addEventListener('click', async () => {
-    stepLog('Demo', 'Running guided example', 'ok');
-    jsonBox.value = JSON.stringify(example, null, 2);
-    saltInput.value = example.salt || '';
-    selectedProofIndex = 0;
-    updateAgendaList();
-    resetFeedChecklist();
-    setIntegrity(null);
-    stepLog('Step 1', 'Loaded demo minutes JSON', 'ok');
-
-    const rootResult = await computeRootFlow({ meetingOverride: example });
-    if (!rootResult) {
-      return;
-    }
-
-    const proofResult = await generateProofFlow(0, { meetingOverride: example });
-    if (!proofResult) {
-      return;
-    }
-
-    const verification = await verifyProofDocumentFlow(proofResult.document, rootResult.root, { addSummary: false });
-    if (verification.valid) {
-      const agenda = proofResult.document.item?.agenda || 'Agenda item';
-      const summary = [
-        '✅ Guided demo complete',
-        `Merkle root: ${rootResult.root}`,
-        `Verified item: ${agenda}`,
-        `Meeting: ${proofResult.document.meeting_id} (${proofResult.document.timestamp})`,
-        '',
-        'Explore each step via the sidebar or paste your own minutes to continue.',
-      ].join('\n');
-      out.value = summary;
-      stepLog('Demo', 'Guided run complete. Output pane updated with summary.', 'ok');
-      const step5 = document.getElementById('step-5');
-      const step6 = document.getElementById('step-6');
-      if (step5) step5.open = true;
-      if (step6) step6.open = true;
-    }
+  btnTryIt?.addEventListener('click', () => {
+    openExampleOverlay();
+    stepLog('Demo', 'Pick an example meeting, then continue with Step 2 to compute the root.', 'ok');
   });
 
   btnVerifyProof?.addEventListener('click', async () => {
@@ -1588,6 +1780,7 @@ body.modal-open{overflow:hidden;}
 
   function openTranscriptOverlay() {
     ensureMeetingDefaults();
+    closeExampleOverlay();
     if (!transcriptOverlay?.classList.contains('open')) {
       transcriptOverlay.classList.add('open');
       document.body.classList.add('modal-open');
@@ -1599,7 +1792,9 @@ body.modal-open{overflow:hidden;}
   function closeTranscriptOverlay() {
     if (transcriptOverlay?.classList.contains('open')) {
       transcriptOverlay.classList.remove('open');
-      document.body.classList.remove('modal-open');
+      if (!exampleOverlay?.classList.contains('open')) {
+        document.body.classList.remove('modal-open');
+      }
       transcriptOverlay.setAttribute('aria-hidden', 'true');
       log('> transcript converter closed');
     }
@@ -1620,8 +1815,15 @@ body.modal-open{overflow:hidden;}
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && transcriptOverlay?.classList.contains('open')) {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    if (transcriptOverlay?.classList.contains('open')) {
       closeTranscriptOverlay();
+      return;
+    }
+    if (exampleOverlay?.classList.contains('open')) {
+      closeExampleOverlay();
     }
   });
 
