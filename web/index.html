@@ -1,170 +1,726 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>meeting-merkle</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-      line-height: 1.5;
-    }
-    body {
-      margin: 0;
-      padding: 2rem;
-      background: var(--page-bg, #f6f8fa);
-    }
-    main {
-      max-width: 960px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.85);
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(27, 39, 51, 0.1);
-    }
-    h1 {
-      margin-top: 0;
-      font-size: 2rem;
-    }
-    section {
-      margin-top: 2.5rem;
-    }
-    textarea {
-      width: 100%;
-      min-height: 200px;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 0.95rem;
-      border-radius: 8px;
-      border: 1px solid #d0d7de;
-      padding: 0.75rem;
-      box-sizing: border-box;
-    }
-    label {
-      font-weight: 600;
-      display: block;
-      margin-bottom: 0.5rem;
-    }
-    input[type="number"], input[type="text"] {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
-      box-sizing: border-box;
-      font-size: 1rem;
-    }
-    button {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      border: none;
-      border-radius: 999px;
-      padding: 0.6rem 1.4rem;
-      margin-top: 0.75rem;
-      font-weight: 600;
-      background: #0969da;
-      color: #fff;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(9, 105, 218, 0.2);
-    }
-    button.secondary {
-      background: #6366f1;
-    }
-    .status {
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      font-size: 0.95rem;
-    }
-    .status.ok {
-      background: rgba(46, 160, 67, 0.1);
-      color: #116329;
-      border: 1px solid rgba(46, 160, 67, 0.3);
-    }
-    .status.error {
-      background: rgba(222, 27, 27, 0.1);
-      color: #86181d;
-      border: 1px solid rgba(222, 27, 27, 0.25);
-    }
-    ul.hashes {
-      list-style: none;
-      padding: 0;
-      margin: 1rem 0 0;
-      border-radius: 8px;
-      background: rgba(9, 105, 218, 0.05);
-      border: 1px solid rgba(9, 105, 218, 0.15);
-    }
-    ul.hashes li {
-      padding: 0.5rem 0.75rem;
-      border-top: 1px solid rgba(9, 105, 218, 0.1);
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 0.9rem;
-      word-break: break-all;
-    }
-    ul.hashes li:first-child {
-      border-top: none;
-    }
-    .actions {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .small {
-      font-size: 0.85rem;
-      color: #57606a;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Meeting-Merkle — Terminal UI</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg: #0b0f14;
+  --panel: #0d131a;
+  --ink: #e7f8ff;
+  --muted: #9fb0bf;
+  --accent: #00ffd1;
+  --accent-2: #ff00a8;
+  --danger: #ff4d6d;
+  --ok: #3dfc9a;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --br: 10px;
+  --glow: 0 0 6px rgba(0,255,209,.35), 0 0 24px rgba(255,0,168,.18);
+  --line: 1px solid rgba(255,255,255,.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background: radial-gradient(1200px 600px at 80% 0%, rgba(255,0,168,.07), transparent 40%),
+                        radial-gradient(1000px 700px at 0% 100%, rgba(0,255,209,.07), transparent 40%),
+                        var(--bg);
+  color:var(--ink); font-family: var(--mono); letter-spacing:.2px;
+}
+.header{
+  padding:16px 20px; border-bottom: var(--line); display:flex; align-items:center; gap:12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+}
+.brand{
+  font-weight:700; font-size:18px; letter-spacing:.6px;
+}
+.tagline{color:var(--muted); font-size:12px}
+.badge{
+  margin-left:auto; padding:4px 10px; border:1px solid rgba(255,255,255,.12);
+  border-radius:999px; color:var(--muted); display:flex; align-items:center; gap:8px;
+}
+.grid{
+  display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; height:calc(100% - 58px);
+}
+.sidebar{
+  background: var(--panel); border: var(--line); border-radius: var(--br); padding:12px; overflow:auto;
+}
+.step{
+  padding:10px; border-radius:8px; border:1px dashed rgba(255,255,255,.08); margin-bottom:10px;
+}
+.step h3{margin:0 0 6px 0; font-size:13px; color:var(--accent)}
+.step p{margin:0 0 8px 0; color:var(--muted); font-size:12px; line-height:1.4}
+.step .actions{display:flex; flex-wrap:wrap; gap:6px}
+button,.btn{
+  background:#0b1218; color:var(--ink); border:1px solid rgba(255,255,255,.12);
+  padding:8px 10px; border-radius:8px; cursor:pointer; font-family:var(--mono);
+}
+button:hover{border-color:rgba(255,255,255,.24)}
+button.primary{
+  border-color: rgba(0,255,209,.5); box-shadow: var(--glow);
+}
+button.ghost{background:transparent}
+input,textarea{
+  width:100%; background:#0a0f14; color:var(--ink); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:10px; font-family:var(--mono); font-size:12px;
+}
+label{font-size:12px; color:var(--muted)}
+.main{
+  display:grid; grid-template-rows: auto 1fr auto; gap:12px; min-height:0;
+}
+.panel{
+  background: var(--panel); border: var(--line); border-radius: var(--br); padding:12px; min-height:0;
+}
+.hero{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.hero .left{display:flex; flex-direction:column; gap:4px}
+.hero .title{font-size:16px; font-weight:700}
+.hero .subtitle{font-size:12px; color:var(--muted)}
+.kv{
+  display:grid; grid-template-columns: 1fr 1fr; gap:12px;
+}
+.kv .box{display:flex; flex-direction:column; gap:6px}
+.feed{
+  background:#091017; border:1px solid rgba(0,255,209,.18); border-radius:8px;
+  padding:10px; font-size:12px; color:#c8ffef; height:220px; overflow:auto;
+}
+.feed .line{white-space:pre-wrap; margin:0 0 4px 0}
+.feed .ok{color:var(--ok)}
+.feed .bad{color:var(--danger)}
+.mono{font-family:var(--mono)}
+.row{display:flex; gap:8px; align-items:center}
+.small{font-size:12px}
+.code{background:#081018; border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px; font-size:12px}
+.status{
+  display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px
+}
+.dot{width:8px;height:8px;border-radius:50%;background:#8b93a0;border:1px solid #444}
+.dot.ok{background:var(--ok); box-shadow:0 0 10px rgba(61,252,154,.6)}
+.dot.bad{background:var(--danger); box-shadow:0 0 10px rgba(255,77,109,.6)}
+.footer{
+  display:flex; justify-content:space-between; align-items:center; gap:8px; color:var(--muted); font-size:12px
+}
+a.link{color:var(--accent)}
+hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
+.scanlines{
+  position:fixed; inset:0; pointer-events:none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.02), rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode:overlay; opacity:.25;
+}
+@media (max-width: 900px){
+  .grid{grid-template-columns:1fr}
+  .kv{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
-  <main>
-    <h1>meeting-merkle</h1>
-    <p>Hash meeting agendas and notes into a Merkle root, generate membership proofs, and verify them offline.</p>
+  <div class="header" role="banner">
+    <div class="brand">MEETING-MERKLE</div>
+    <div class="tagline">Tamper-evident, privacy-preserving minutes</div>
+    <div class="badge" aria-live="polite">
+      <span class="dot" id="integrity-dot" title="Integrity badge"></span> integrity
+    </div>
+  </div>
 
-    <section>
-      <div class="actions">
-        <button id="load-example" type="button" class="secondary">Load example meeting</button>
+  <div class="grid" role="main">
+    <aside class="sidebar" aria-label="Steps">
+      <div class="step">
+        <h3>Step 1 — Load Minutes</h3>
+        <p>Paste your minutes JSON. You can load an example to explore.</p>
+        <div class="actions">
+          <button class="ghost" id="btn-example">Load Example</button>
+          <button class="ghost" id="btn-clear">Clear</button>
+        </div>
       </div>
-      <form id="root-form">
-        <label for="meeting-json">Meeting JSON</label>
-        <textarea id="meeting-json" spellcheck="false" placeholder="Paste meeting JSON here"></textarea>
-        <button type="submit">Compute Merkle root</button>
-      </form>
-      <div id="root-status" class="status" hidden></div>
-      <div id="root-result" hidden>
-        <h3>Merkle root</h3>
-        <p class="small">Hex-encoded SHA-256 root of the Merkle tree.</p>
-        <p id="root-hash" class="small"></p>
-        <h3>Leaf hashes</h3>
-        <ul id="leaf-list" class="hashes"></ul>
+      <div class="step">
+        <h3>Step 2 — Compute Root</h3>
+        <p>Normalize → hash items (SHA-256) → build Merkle tree.</p>
+        <div class="actions">
+          <button class="primary" id="btn-root">Compute Root</button>
+          <button id="btn-copy-root">Copy Root</button>
+        </div>
+      </div>
+      <div class="step">
+        <h3>Step 3 — Publish &amp; Share</h3>
+        <p>Post the root where others can see (e.g. Slack).</p>
+        <div class="actions">
+          <button id="btn-slack">Post to Slack</button>
+        </div>
+      </div>
+      <div class="step">
+        <h3>Step 4 — Verify Record</h3>
+        <p>Recompute from JSON and compare to an expected root.</p>
+        <div class="actions row">
+          <input id="expected-root" placeholder="Expected root (hex)" aria-label="Expected root" />
+          <button id="btn-verify-root">Verify Against Root</button>
+        </div>
+      </div>
+      <div class="step">
+        <h3>Step 5 — Generate Proof</h3>
+        <p>Prove one item is included without revealing others.</p>
+        <div class="actions row">
+          <input id="proof-index" placeholder="Item index (0-based)" aria-label="Item index" />
+          <button id="btn-proof">Create Proof for Item #</button>
+        </div>
+      </div>
+      <div class="step">
+        <h3>Step 6 — Verify Proof</h3>
+        <p>Check a membership proof against the root.</p>
+        <div class="actions">
+          <button id="btn-verify-proof">Verify Proof</button>
+          <button id="btn-copy-output">Copy Output</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="panel hero">
+        <div class="left">
+          <div class="title">Trust the minutes. Not the note-taker.</div>
+          <div class="subtitle">All verification is local. No servers. No secrets leaked.</div>
+        </div>
+        <div class="status">
+          <span>Root:</span>
+          <code id="root" class="mono">—</code>
+        </div>
+      </div>
+
+      <div class="panel kv">
+        <div class="box">
+          <label for="json">Minutes JSON</label>
+          <textarea id="json" rows="12" placeholder='Paste your minutes JSON here...'></textarea>
+          <div class="row small">
+            <label for="salt" style="min-width:80px">Salt (opt.)</label>
+            <input id="salt" placeholder="random-16-bytes" />
+          </div>
+        </div>
+
+        <div class="box">
+          <label>Terminal Feed</label>
+          <div class="feed" id="feed" aria-live="polite" aria-atomic="false">
+            <div class="line small" id="empty-line">Load minutes JSON to begin. You can use "Load Example" if you are just exploring.</div>
+          </div>
+          <hr class="div" />
+          <div class="box">
+            <label for="output">Output</label>
+            <textarea id="output" rows="6" class="mono" placeholder="Proofs, verification results, and composer text appear here."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel footer">
+        <div>SHA-256 • Odd-leaf duplication • Canonical JSON • Local-only</div>
+        <div><a class="link" href="#" id="why-link">Why salting matters</a></div>
       </div>
     </section>
+  </div>
 
-    <section>
-      <h2>Membership proof</h2>
-      <form id="proof-form">
-        <label for="proof-index">Item index</label>
-        <input id="proof-index" type="number" min="0" step="1" value="0">
-        <button type="submit">Generate proof</button>
-      </form>
-      <div id="proof-status" class="status" hidden></div>
-      <label for="proof-output" class="small">Proof JSON</label>
-      <textarea id="proof-output" spellcheck="false" readonly></textarea>
-    </section>
+  <div class="scanlines" aria-hidden="true"></div>
 
-    <section>
-      <h2>Verify proof</h2>
-      <form id="verify-form">
-        <label for="verify-input">Proof JSON</label>
-        <textarea id="verify-input" spellcheck="false" placeholder="Paste proof JSON here"></textarea>
-        <button type="submit">Verify proof</button>
-      </form>
-      <div id="verify-status" class="status" hidden></div>
-    </section>
-  </main>
-  <script src="app.js"></script>
+<script>
+(() => {
+  const encoder = new TextEncoder();
+
+  const $ = (sel) => document.querySelector(sel);
+  const feed = document.getElementById('feed');
+  const rootCode = document.getElementById('root');
+  const out = document.getElementById('output');
+  const jsonBox = document.getElementById('json');
+  const dot = document.getElementById('integrity-dot');
+
+  function isPlainObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function canonicalizeString(value, field) {
+    if (typeof value !== 'string') {
+      throw new Error(`${field} must be a string`);
+    }
+    return value.replace(/\r\n?/g, '\n');
+  }
+
+  function canonicalizeOptionalString(value, field) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return canonicalizeString(value, field);
+  }
+
+  function validateTimestamp(value, field) {
+    if (Number.isNaN(Date.parse(value))) {
+      throw new Error(`${field} must be an ISO-8601 timestamp`);
+    }
+    return value;
+  }
+
+  function normalizeMeetingObject(raw, saltOverride) {
+    if (!isPlainObject(raw)) {
+      throw new Error('Minutes JSON must be an object.');
+    }
+    const meeting_id = canonicalizeString(raw.meeting_id, 'meeting_id');
+    const timestamp = validateTimestamp(canonicalizeString(raw.timestamp, 'timestamp'), 'timestamp');
+    const salt = saltOverride !== undefined && saltOverride !== ''
+      ? canonicalizeString(saltOverride, 'salt')
+      : canonicalizeOptionalString(raw.salt, 'salt');
+    const itemsValue = raw.items;
+    if (!Array.isArray(itemsValue)) {
+      throw new Error('Items must be an array of {agenda, notes}.');
+    }
+    if (itemsValue.length === 0) {
+      throw new Error('No agenda items found. Add at least one {agenda, notes} pair.');
+    }
+    const items = itemsValue.map((entry, index) => {
+      if (!isPlainObject(entry)) {
+        throw new Error(`items[${index}] must be an object`);
+      }
+      return {
+        agenda: canonicalizeString(entry.agenda, `items[${index}].agenda`),
+        notes: canonicalizeString(entry.notes, `items[${index}].notes`),
+      };
+    });
+    return { meeting_id, timestamp, salt, items };
+  }
+
+  function bytesToHex(bytes) {
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  function hexToBytes(hex) {
+    if (typeof hex !== 'string' || hex.length % 2 !== 0 || !/^[0-9a-f]*$/i.test(hex)) {
+      throw new Error('Hex value must be an even-length hexadecimal string.');
+    }
+    const array = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      array[i / 2] = Number.parseInt(hex.slice(i, i + 2), 16);
+    }
+    return array;
+  }
+
+  async function hashBytes(bytes) {
+    const buffer = await crypto.subtle.digest('SHA-256', bytes);
+    return new Uint8Array(buffer);
+  }
+
+  async function hashUtf8(text) {
+    return hashBytes(encoder.encode(text));
+  }
+
+  async function hashLeaf(item, salt) {
+    const payload = salt ? `${salt}\n${item.agenda}\n${item.notes}` : `${item.agenda}\n${item.notes}`;
+    return hashUtf8(payload);
+  }
+
+  async function hashInternal(left, right) {
+    const combined = new Uint8Array(left.length + right.length);
+    combined.set(left, 0);
+    combined.set(right, left.length);
+    return hashBytes(combined);
+  }
+
+  async function buildLevels(items, salt) {
+    let current = await Promise.all(items.map((item) => hashLeaf(item, salt)));
+    const levels = [current];
+    while (current.length > 1) {
+      const next = [];
+      for (let i = 0; i < current.length; i += 2) {
+        const left = current[i];
+        const right = current[i + 1] ?? current[i];
+        // eslint-disable-next-line no-await-in-loop
+        next.push(await hashInternal(left, right));
+      }
+      current = next;
+      levels.push(current);
+    }
+    return levels;
+  }
+
+  async function buildTree(items, salt) {
+    const levels = await buildLevels(items, salt);
+    return {
+      levels,
+      leaves: levels[0].map(bytesToHex),
+      root: bytesToHex(levels[levels.length - 1][0]),
+      levelCounts: levels.map((level) => level.length),
+    };
+  }
+
+  async function buildTreeFromData(data, saltOverride) {
+    const meeting = normalizeMeetingObject(data, saltOverride);
+    const tree = await buildTree(meeting.items, meeting.salt);
+    return { meeting, tree };
+  }
+
+  function generateProofFromLevels(levels, index) {
+    const proof = [];
+    let currentIndex = index;
+    for (let level = 0; level < levels.length - 1; level += 1) {
+      const layer = levels[level];
+      const isRight = currentIndex % 2 === 1;
+      const siblingIndex = isRight ? currentIndex - 1 : currentIndex + 1;
+      const sibling = layer[siblingIndex] ?? layer[currentIndex];
+      proof.push({
+        position: isRight ? 'left' : 'right',
+        hash: bytesToHex(sibling),
+      });
+      currentIndex = Math.floor(currentIndex / 2);
+    }
+    return proof;
+  }
+
+  function normalizeProofStep(entry, index) {
+    if (!isPlainObject(entry)) {
+      throw new Error(`Proof step ${index} must be an object`);
+    }
+    const position = entry.position;
+    if (position !== 'left' && position !== 'right') {
+      throw new Error(`Proof step ${index} must specify position "left" or "right"`);
+    }
+    const hash = entry.hash;
+    if (typeof hash !== 'string') {
+      throw new Error(`Proof step ${index} must include a hash string`);
+    }
+    if (!/^[0-9a-f]{64}$/i.test(hash)) {
+      throw new Error(`Proof step ${index} hash must be a 32-byte hex string`);
+    }
+    return { position, hash: hash.toLowerCase() };
+  }
+
+  async function reduceProof(leafBytes, proofSteps) {
+    let current = leafBytes;
+    for (const step of proofSteps) {
+      const sibling = hexToBytes(step.hash);
+      // eslint-disable-next-line no-await-in-loop
+      current = step.position === 'left'
+        ? await hashInternal(sibling, current)
+        : await hashInternal(current, sibling);
+    }
+    return current;
+  }
+
+  window.MeetingMerkle = {
+    async computeRoot(data, options = {}) {
+      const { meeting, tree } = await buildTreeFromData(data, options.salt);
+      return {
+        root: tree.root,
+        leafCount: tree.leaves.length,
+        levelCounts: tree.levelCounts,
+        leaves: tree.leaves,
+        meeting,
+      };
+    },
+    async verifyRoot(data, expectedRoot, options = {}) {
+      const target = (expectedRoot || '').toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(target)) {
+        throw new Error('Expected root must be a 32-byte hex string.');
+      }
+      const result = await this.computeRoot(data, options);
+      return {
+        match: result.root === target,
+        computedRoot: result.root,
+        leafCount: result.leafCount,
+        levelCounts: result.levelCounts,
+        leaves: result.leaves,
+        meeting: result.meeting,
+      };
+    },
+    async generateProof(data, index, options = {}) {
+      if (!Number.isInteger(index) || index < 0) {
+        throw new Error('Index must be a non-negative integer');
+      }
+      const { meeting, tree } = await buildTreeFromData(data, options.salt);
+      if (index >= meeting.items.length) {
+        throw new Error(`Index ${index} is out of bounds for items array of length ${meeting.items.length}`);
+      }
+      const proof = generateProofFromLevels(tree.levels, index);
+      const document = {
+        meeting_id: meeting.meeting_id,
+        timestamp: meeting.timestamp,
+        salt: meeting.salt,
+        index,
+        item: meeting.items[index],
+        leaf: tree.leaves[index],
+        proof,
+        root: tree.root,
+      };
+      return { document, pathLength: proof.length };
+    },
+    async verifyProof(proofDoc, expectedRoot) {
+      if (!isPlainObject(proofDoc)) {
+        throw new Error('Proof must be a JSON object');
+      }
+      const canonical = normalizeMeetingObject({
+        meeting_id: proofDoc.meeting_id,
+        timestamp: proofDoc.timestamp,
+        salt: proofDoc.salt,
+        items: [proofDoc.item],
+      });
+      const canonicalItem = canonical.items[0];
+      const canonicalLeaf = bytesToHex(await hashLeaf(canonicalItem, canonical.salt));
+      const providedLeaf = typeof proofDoc.leaf === 'string' ? proofDoc.leaf.toLowerCase() : '';
+      if (canonicalLeaf !== providedLeaf) {
+        return {
+          valid: false,
+          reason: 'leaf-mismatch',
+          computedLeaf: canonicalLeaf,
+          providedLeaf,
+        };
+      }
+      if (!Array.isArray(proofDoc.proof)) {
+        throw new Error('Proof proof must be an array');
+      }
+      const proofSteps = proofDoc.proof.map((entry, idx) => normalizeProofStep(entry, idx));
+      const leafBytes = hexToBytes(canonicalLeaf);
+      const computedRootBytes = await reduceProof(leafBytes, proofSteps);
+      const computedRoot = bytesToHex(computedRootBytes);
+      const targetRoot = (expectedRoot || proofDoc.root || '').toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(targetRoot)) {
+        throw new Error('Expected root must be a 32-byte hex string.');
+      }
+      return {
+        valid: computedRoot === targetRoot,
+        computedRoot,
+        expectedRoot: targetRoot,
+      };
+    },
+  };
+
+  const log = (msg, cls = '') => {
+    const placeholder = document.getElementById('empty-line');
+    if (placeholder) {
+      placeholder.remove();
+    }
+    const line = document.createElement('div');
+    line.className = `line ${cls}`.trim();
+    line.textContent = msg;
+    feed.appendChild(line);
+    feed.scrollTop = feed.scrollHeight;
+  };
+
+  const copy = async (text) => {
+    if (!text) {
+      log('> nothing to copy', 'bad');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      log('> copied to clipboard', 'ok');
+    } catch (error) {
+      log('> clipboard not available', 'bad');
+    }
+  };
+
+  const notWired = (fn) => {
+    log(`> ${fn} not wired. Provide window.MeetingMerkle.${fn}()`, 'bad');
+  };
+
+  function setIntegrity(state) {
+    dot.classList.remove('ok', 'bad');
+    if (state === 'ok') {
+      dot.classList.add('ok');
+    } else if (state === 'bad') {
+      dot.classList.add('bad');
+    }
+  }
+
+  const example = {
+    meeting_id: 'DAO-Council-Meeting-2025-09-17',
+    timestamp: '2025-09-17T14:00:00Z',
+    items: [
+      { agenda: 'Budget Allocation for Q4', notes: 'Allocate 500 DAO tokens to the community fund.' },
+      { agenda: 'Project X Update', notes: 'Reviewed progress; deadline extended to Nov 30.' },
+      { agenda: 'New Member Onboarding', notes: 'Discussed process; no formal resolution.' },
+    ],
+  };
+
+  const btnExample = document.getElementById('btn-example');
+  const btnClear = document.getElementById('btn-clear');
+  const btnCopyRoot = document.getElementById('btn-copy-root');
+  const btnRoot = document.getElementById('btn-root');
+  const btnSlack = document.getElementById('btn-slack');
+  const btnVerifyRoot = document.getElementById('btn-verify-root');
+  const btnProof = document.getElementById('btn-proof');
+  const btnVerifyProof = document.getElementById('btn-verify-proof');
+  const btnCopyOutput = document.getElementById('btn-copy-output');
+  const proofIndexInput = document.getElementById('proof-index');
+  const expectedRootInput = document.getElementById('expected-root');
+  const saltInput = document.getElementById('salt');
+  const whyLink = document.getElementById('why-link');
+
+  btnExample.addEventListener('click', () => {
+    jsonBox.value = JSON.stringify(example, null, 2);
+    log('> loaded example minutes');
+    setIntegrity(null);
+  });
+
+  btnClear.addEventListener('click', () => {
+    jsonBox.value = '';
+    out.value = '';
+    rootCode.textContent = '—';
+    feed.innerHTML = '<div class="line small" id="empty-line">Load minutes JSON to begin. You can use "Load Example" if you are just exploring.</div>';
+    log('> cleared');
+    setIntegrity(null);
+  });
+
+  btnCopyRoot.addEventListener('click', () => copy(rootCode.textContent));
+
+  btnRoot.addEventListener('click', async () => {
+    let data;
+    try {
+      data = JSON.parse(jsonBox.value);
+      log('> parsing input ... OK');
+    } catch (error) {
+      log("Couldn't parse JSON. Check for trailing commas or mismatched quotes.", 'bad');
+      return;
+    }
+    const api = window.MeetingMerkle;
+    if (!api?.computeRoot) {
+      notWired('computeRoot');
+      return;
+    }
+    try {
+      const salt = saltInput.value.trim() || undefined;
+      const result = await api.computeRoot(data, { salt });
+      log('> canonicalizing JSON ... OK');
+      log(`> hashing ${result.leafCount} items with SHA-256 ... OK`);
+      log(`> building merkle levels: ${result.levelCounts.join(' -> ')} ... OK`);
+      log(`> ROOT = ${result.root} (hex)`);
+      rootCode.textContent = result.root;
+      setIntegrity('ok');
+    } catch (error) {
+      log(`> computeRoot failed: ${error.message || error}`, 'bad');
+      setIntegrity('bad');
+    }
+  });
+
+  btnSlack.addEventListener('click', () => {
+    let data;
+    try {
+      data = JSON.parse(jsonBox.value);
+    } catch (error) {
+      log("Couldn't parse JSON. Check for trailing commas or mismatched quotes.", 'bad');
+      return;
+    }
+    const root = rootCode.textContent;
+    if (!root || root === '—') {
+      log('> compute a root first', 'bad');
+      return;
+    }
+    const message = [
+      'Meeting-Merkle \ud83d\uddad\ufe0f',
+      `Meeting: ${data.meeting_id || '—'}`,
+      `Timestamp: ${data.timestamp || '—'}`,
+      `Merkle Root: ${root}`,
+      '',
+      'Anyone can verify locally: compute the root from the minutes JSON and compare to the above.',
+    ].join('\n');
+    out.value = message;
+    copy(message);
+  });
+
+  btnVerifyRoot.addEventListener('click', async () => {
+    let data;
+    try {
+      data = JSON.parse(jsonBox.value);
+      log('> parsing input ... OK');
+    } catch (error) {
+      log("Couldn't parse JSON. Check for trailing commas or mismatched quotes.", 'bad');
+      return;
+    }
+    const expected = expectedRootInput.value.trim();
+    if (!expected) {
+      log('> enter an expected root', 'bad');
+      return;
+    }
+    const api = window.MeetingMerkle;
+    if (!api?.verifyRoot) {
+      notWired('verifyRoot');
+      return;
+    }
+    try {
+      const salt = saltInput.value.trim() || undefined;
+      const result = await api.verifyRoot(data, expected, { salt });
+      log('> canonicalizing JSON ... OK');
+      log(`> verifying against expected root ... ${result.match ? 'MATCH \u2705' : 'MISMATCH \u274c'}`);
+      rootCode.textContent = result.computedRoot;
+      setIntegrity(result.match ? 'ok' : 'bad');
+    } catch (error) {
+      log(`> verifyRoot failed: ${error.message || error}`, 'bad');
+      setIntegrity('bad');
+    }
+  });
+
+  btnProof.addEventListener('click', async () => {
+    let data;
+    try {
+      data = JSON.parse(jsonBox.value);
+      log('> parsing input ... OK');
+    } catch (error) {
+      log("Couldn't parse JSON. Check for trailing commas or mismatched quotes.", 'bad');
+      return;
+    }
+    const index = Number.parseInt(proofIndexInput.value, 10);
+    if (!Number.isInteger(index) || index < 0) {
+      log('> enter a numeric item index (0-based)', 'bad');
+      return;
+    }
+    const api = window.MeetingMerkle;
+    if (!api?.generateProof) {
+      notWired('generateProof');
+      return;
+    }
+    try {
+      const salt = saltInput.value.trim() || undefined;
+      const result = await api.generateProof(data, index, { salt });
+      log(`> generating proof for item #${index} ... OK (path length = ${result.pathLength})`, 'ok');
+      out.value = JSON.stringify(result.document, null, 2);
+    } catch (error) {
+      log(`> generateProof failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnVerifyProof.addEventListener('click', async () => {
+    let proof;
+    try {
+      proof = JSON.parse(out.value);
+      log('> parsing proof ... OK');
+    } catch (error) {
+      log('> paste a proof JSON into Output', 'bad');
+      return;
+    }
+    const displayedRoot = rootCode.textContent;
+    const expected = displayedRoot && displayedRoot !== '—' ? displayedRoot : undefined;
+    const api = window.MeetingMerkle;
+    if (!api?.verifyProof) {
+      notWired('verifyProof');
+      return;
+    }
+    try {
+      const result = await api.verifyProof(proof, expected);
+      log(`> verifying proof ... ${result.valid ? 'VALID \u2705' : 'INVALID \u274c'}`, result.valid ? 'ok' : 'bad');
+      if (!result.valid) {
+        setIntegrity('bad');
+      }
+    } catch (error) {
+      log(`> verifyProof failed: ${error.message || error}`, 'bad');
+    }
+  });
+
+  btnCopyOutput.addEventListener('click', () => copy(out.value));
+
+  whyLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    out.value = [
+      'Why salting matters:',
+      '- Without a salt, a guessable phrase might be brute-checked against a hash.',
+      '- Adding a random per-meeting salt makes hashes unique and unguessable.',
+      '- Include the salt in each item leaf derivation, or in the meeting metadata.',
+    ].join('\n');
+    log('> opened note: salting', 'ok');
+  });
+})();
+</script>
 </body>
 </html>
