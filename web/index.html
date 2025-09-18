@@ -7,6 +7,7 @@
 <link rel="icon" href="data:,">
 <style>
 :root{
+  color-scheme: dark;
   --bg: #0b0f14;
   --panel: #0d131a;
   --ink: #e7f8ff;
@@ -20,13 +21,45 @@
   --br: 10px;
   --glow: 0 0 6px rgba(0,255,209,.35), 0 0 24px rgba(255,0,168,.18);
   --line: 1px solid rgba(255,255,255,.06);
+  --border-weak: rgba(255,255,255,.12);
+  --border-strong: rgba(255,255,255,.24);
+  --feed-border: rgba(0,255,209,.18);
+  --feed-bg: rgba(9,16,23,.92);
+  --feed-text: #c8ffef;
+  --input-bg: #0a0f14;
+  --button-bg: #0b1218;
+  --body-gradient: radial-gradient(1200px 600px at 80% 0%, rgba(255,0,168,.07), transparent 40%),
+                   radial-gradient(1000px 700px at 0% 100%, rgba(0,255,209,.07), transparent 40%),
+                   var(--bg);
+}
+
+[data-theme="light"]{
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --ink: #0b111a;
+  --muted: #4c6072;
+  --accent: #0066ff;
+  --accent-2: #ff3fb4;
+  --danger: #d42a4a;
+  --ok: #158a4c;
+  --glow: 0 0 6px rgba(0,102,255,.25), 0 0 24px rgba(255,63,180,.15);
+  --line: 1px solid rgba(8,16,24,.08);
+  --border-weak: rgba(11,17,26,.14);
+  --border-strong: rgba(11,17,26,.28);
+  --feed-border: rgba(0,102,255,.18);
+  --feed-bg: rgba(237,242,250,.92);
+  --feed-text: #17324a;
+  --input-bg: #eef2f8;
+  --button-bg: #f5f7fb;
+  --body-gradient: radial-gradient(1200px 600px at 80% 0%, rgba(0,102,255,.08), transparent 40%),
+                   radial-gradient(1000px 700px at 0% 100%, rgba(255,63,180,.08), transparent 40%),
+                   var(--bg);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; background: radial-gradient(1200px 600px at 80% 0%, rgba(255,0,168,.07), transparent 40%),
-                        radial-gradient(1000px 700px at 0% 100%, rgba(0,255,209,.07), transparent 40%),
-                        var(--bg);
+  margin:0; background: var(--body-gradient);
   color:var(--ink); font-family: var(--mono); letter-spacing:.2px;
 }
 .header{
@@ -38,7 +71,7 @@ body{
 }
 .tagline{color:var(--muted); font-size:12px}
 .badge{
-  margin-left:auto; padding:4px 10px; border:1px solid rgba(255,255,255,.12);
+  margin-left:8px; padding:4px 10px; border:1px solid var(--border-weak);
   border-radius:999px; color:var(--muted); display:flex; align-items:center; gap:8px;
 }
 .grid{
@@ -54,16 +87,19 @@ body{
 .step p{margin:0 0 8px 0; color:var(--muted); font-size:12px; line-height:1.4}
 .step .actions{display:flex; flex-wrap:wrap; gap:6px}
 button,.btn{
-  background:#0b1218; color:var(--ink); border:1px solid rgba(255,255,255,.12);
+  background:var(--button-bg); color:var(--ink); border:1px solid var(--border-weak);
   padding:8px 10px; border-radius:8px; cursor:pointer; font-family:var(--mono);
 }
-button:hover{border-color:rgba(255,255,255,.24)}
+button:hover{border-color:var(--border-strong)}
 button.primary{
-  border-color: rgba(0,255,209,.5); box-shadow: var(--glow);
+  border-color: var(--accent); box-shadow: var(--glow);
 }
 button.ghost{background:transparent}
+#theme-toggle{
+  margin-left:auto; padding:6px 12px; font-size:12px;
+}
 input,textarea{
-  width:100%; background:#0a0f14; color:var(--ink); border:1px solid rgba(255,255,255,.12);
+  width:100%; background:var(--input-bg); color:var(--ink); border:1px solid var(--border-weak);
   border-radius:8px; padding:10px; font-family:var(--mono); font-size:12px;
 }
 label{font-size:12px; color:var(--muted)}
@@ -84,8 +120,8 @@ label{font-size:12px; color:var(--muted)}
 }
 .kv .box{display:flex; flex-direction:column; gap:6px}
 .feed{
-  background:#091017; border:1px solid rgba(0,255,209,.18); border-radius:8px;
-  padding:10px; font-size:12px; color:#c8ffef; height:220px; overflow:auto;
+  background:var(--feed-bg); border:1px solid var(--feed-border); border-radius:8px;
+  padding:10px; font-size:12px; color:var(--feed-text); height:220px; overflow:auto;
 }
 .feed .line{white-space:pre-wrap; margin:0 0 4px 0}
 .feed .ok{color:var(--ok)}
@@ -120,6 +156,7 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   <div class="header" role="banner">
     <div class="brand">MEETING-MERKLE</div>
     <div class="tagline">Tamper-evident, privacy-preserving minutes</div>
+    <button class="ghost" id="theme-toggle" type="button" aria-label="Toggle theme">Light Theme</button>
     <div class="badge" aria-live="polite">
       <span class="dot" id="integrity-dot" title="Integrity badge"></span> integrity
     </div>
@@ -515,6 +552,45 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
   const notWired = (fn) => {
     log(`> ${fn} not wired. Provide window.MeetingMerkle.${fn}()`, 'bad');
   };
+
+  const themeToggle = document.getElementById('theme-toggle');
+  const THEME_KEY = 'meeting-merkle-theme';
+
+  const applyTheme = (theme) => {
+    const normalized = theme === 'light' ? 'light' : 'dark';
+    if (normalized === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    try {
+      localStorage.setItem(THEME_KEY, normalized);
+    } catch (_) {
+      /* ignore storage failures */
+    }
+    if (themeToggle) {
+      const nextLabel = normalized === 'light' ? 'Dark Theme' : 'Light Theme';
+      themeToggle.textContent = nextLabel;
+      themeToggle.setAttribute('aria-label', `Activate ${nextLabel.toLowerCase()}`);
+      themeToggle.setAttribute('aria-pressed', normalized === 'light' ? 'true' : 'false');
+    }
+  };
+
+  const storedTheme = (() => {
+    try {
+      return localStorage.getItem(THEME_KEY);
+    } catch (_) {
+      return null;
+    }
+  })();
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(storedTheme ?? (prefersDark ? 'dark' : 'light'));
+
+  themeToggle?.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    log(`> theme set to ${next}`, 'ok');
+  });
 
   function setIntegrity(state) {
     dot.classList.remove('ok', 'bad');
