@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Merkle-Meet — Tamper-evident, privacy-preserving minutes</title>
-<link rel="icon" type="image/svg+xml" href="assets/merklemeet_logo.svg">
+<link rel="icon" href="data:,">
 <style>
 :root{
   color-scheme: dark;
@@ -70,6 +70,21 @@ body{
   font-weight:700; font-size:18px; letter-spacing:.6px;
 }
 .tagline{color:var(--muted); font-size:12px}
+.logo{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid var(--border-weak);
+  padding:4px;
+  background: var(--panel);
+  object-fit:contain;
+}
+
+[data-theme="light"] .logo{
+  background:#ffffff;
+  box-shadow:0 4px 12px rgba(11,17,26,.08);
+}
+
 .badge{
   margin-left:8px; padding:4px 10px; border:1px solid var(--border-weak);
   border-radius:999px; color:var(--muted); display:flex; align-items:center; gap:8px;
@@ -165,7 +180,8 @@ hr.div{border:0;border-top:1px solid rgba(255,255,255,.08);margin:8px 0}
 </head>
 <body>
   <div class="header" role="banner">
-    <div class="brand">MERKLE MEET</div>
+    <img src="assets/merklemeet_logo.svg" alt="Merkle Meet logo" class="logo" width="32" height="32" />
+    <div class="brand">MERKLE-MEET</div>
     <div class="tagline">Tamper-evident, privacy-preserving minutes</div>
     <button class="ghost" id="theme-toggle" type="button" aria-label="Toggle theme">Light Theme</button>
     <div class="badge" aria-live="polite">
