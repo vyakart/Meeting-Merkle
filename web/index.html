@@ -484,7 +484,45 @@ body.modal-open{overflow:hidden;}
 .items-overview .item-title{font-weight:600; display:block;}
 .items-overview .item-notes{color:var(--muted); font-size:11px; display:block; line-height:1.4;}
 
-.proof-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+.proof-row{
+  margin-top:6px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.proof-row input{
+  flex:1 1 220px;
+  min-width:180px;
+  width:auto;
+}
+.proof-actions{
+  display:inline-flex;
+  align-items:center;
+  margin-top:10px;
+  border:1px solid var(--border-weak);
+  border-radius:10px;
+  overflow:hidden;
+  background:var(--button-bg);
+}
+.proof-actions button{
+  border:0;
+  background:transparent;
+  color:var(--ink);
+  font-family:var(--mono);
+  font-size:12px;
+  padding:8px 14px;
+  border-radius:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.proof-actions button + button{border-left:1px solid var(--border-weak);}
+.proof-actions .icon-button{padding:8px; width:38px;}
+.proof-actions button:hover{background:rgba(255,255,255,.05);}
+.proof-actions button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
 .feed ul{margin:0;padding-left:18px;}
 
 .hero-sticky-spacer{height:0;}
@@ -647,9 +685,9 @@ body.modal-open{overflow:hidden;}
         <div class="step-body">
           <div class="step-helptext" id="help-step-5">A membership proof lets you show one agenda item was part of the meeting without revealing the rest of the notes.</div>
           <p>Select an agenda item (radio list beside the minutes) to generate its inclusion proof.</p>
-          <div class="actions row" style="margin-top:6px">
+          <div class="actions row proof-row">
             <input id="proof-index" placeholder="Item index (0-based)" aria-label="Item index (optional)" />
-            <button id="btn-proof">Create Proof</button>
+            <button class="primary" id="btn-proof" type="button">Create Proof</button>
           </div>
           <div class="proof-actions">
             <button class="icon-button" id="btn-proof-copy" type="button" aria-label="Copy proof JSON">
