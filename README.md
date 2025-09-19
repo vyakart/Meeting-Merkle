@@ -76,6 +76,18 @@ Open `web/index.html` in a browser (no build step needed). Paste a meeting JSON 
 
 The "Load example meeting" button populates the sample data from `examples/meeting.json` for quick exploration.
 
+### Browser API surface
+
+The page exposes its helpers on `window.MerkleMeet` (alias `window.MeetingMerkle`) so you can drive the workflow or plug in your own UI. The methods are regular functions—you can safely destructure them without worrying about `this` binding:
+
+```js
+const { computeRoot, verifyRoot, generateProof } = window.MerkleMeet;
+const meeting = await computeRoot(exampleMinutesJson);
+const verification = await verifyRoot(exampleMinutesJson, meeting.root);
+```
+
+`computeRoot` and `generateProof` share the same canonicalisation logic as the Node library, and the browser implementation hashes sibling pairs in parallel for snappier performance on larger meetings.
+
 ## Data format
 
 Meetings are JSON objects shaped like:

@@ -874,14 +874,13 @@ body.modal-open{overflow:hidden;}
     let current = await Promise.all(items.map((item) => hashLeaf(item, salt)));
     const levels = [current];
     while (current.length > 1) {
-      const next = [];
+      const pairs = [];
       for (let i = 0; i < current.length; i += 2) {
         const left = current[i];
         const right = current[i + 1] ?? current[i];
-        // eslint-disable-next-line no-await-in-loop
-        next.push(await hashInternal(left, right));
+        pairs.push(hashInternal(left, right));
       }
-      current = next;
+      current = await Promise.all(pairs);
       levels.push(current);
     }
     return levels;
@@ -950,9 +949,14 @@ body.modal-open{overflow:hidden;}
     return current;
   }
 
+  async function computeRootArtifacts(data, options = {}) {
+    const { meeting, tree } = await buildTreeFromData(data, options.salt);
+    return { meeting, tree };
+  }
+
   const defaultApi = {
     async computeRoot(data, options = {}) {
-      const { meeting, tree } = await buildTreeFromData(data, options.salt);
+      const { meeting, tree } = await computeRootArtifacts(data, options);
       return {
         root: tree.root,
         leafCount: tree.leaves.length,
@@ -966,21 +970,21 @@ body.modal-open{overflow:hidden;}
       if (!/^[0-9a-f]{64}$/.test(target)) {
         throw new Error('Expected root must be a 32-byte hex string.');
       }
-      const result = await this.computeRoot(data, options);
+      const { meeting, tree } = await computeRootArtifacts(data, options);
       return {
-        match: result.root === target,
-        computedRoot: result.root,
-        leafCount: result.leafCount,
-        levelCounts: result.levelCounts,
-        leaves: result.leaves,
-        meeting: result.meeting,
+        match: tree.root === target,
+        computedRoot: tree.root,
+        leafCount: tree.leaves.length,
+        levelCounts: tree.levelCounts,
+        leaves: tree.leaves,
+        meeting,
       };
     },
     async generateProof(data, index, options = {}) {
       if (!Number.isInteger(index) || index < 0) {
         throw new Error('Index must be a non-negative integer');
       }
-      const { meeting, tree } = await buildTreeFromData(data, options.salt);
+      const { meeting, tree } = await computeRootArtifacts(data, options);
       if (index >= meeting.items.length) {
         throw new Error(`Index ${index} is out of bounds for items array of length ${meeting.items.length}`);
       }
