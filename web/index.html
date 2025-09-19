@@ -148,6 +148,23 @@ button.primary{
   border-color: var(--accent); box-shadow: var(--glow);
 }
 button.ghost{background:transparent}
+.icon-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px;
+  gap:0;
+}
+.icon-button svg{
+  width:16px;
+  height:16px;
+  display:block;
+  stroke:currentColor;
+  stroke-width:1.6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  fill:none;
+}
 
 .cta-button{
   position:relative;
@@ -561,7 +578,7 @@ body.modal-open{overflow:hidden;}
           <div class="step-helptext" id="help-step-1">Minutes JSON is the canonical record we hash. Each agenda item becomes a Merkle leaf in the order it appears. Review or edit it before computing the root.</div>
           <p>Paste your minutes JSON. You can load an example to explore.</p>
           <div class="actions">
-            <button class="ghost" id="btn-example">Load Example</button>
+            <button class="ghost" id="btn-example">Load JSON</button>
             <button class="ghost" id="btn-clear">Clear</button>
           </div>
         </div>
@@ -577,7 +594,12 @@ body.modal-open{overflow:hidden;}
           <p>Normalize → hash items (SHA-256) → build Merkle tree.</p>
           <div class="actions">
             <button class="primary" id="btn-root">Compute Root</button>
-            <button id="btn-copy-root">Copy Root</button>
+            <button class="icon-button" id="btn-copy-root" type="button" aria-label="Copy root">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+              </svg>
+            </button>
           </div>
         </div>
       </details>
@@ -592,7 +614,12 @@ body.modal-open{overflow:hidden;}
           <p>Post the root where others can see (e.g. Slack).</p>
           <div class="actions">
             <button id="btn-slack">Compose Slack message</button>
-            <button id="btn-slack-copy" type="button">Copy Slack message</button>
+            <button class="icon-button" id="btn-slack-copy" type="button" aria-label="Copy Slack message">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+              </svg>
+            </button>
           </div>
         </div>
       </details>
@@ -625,7 +652,12 @@ body.modal-open{overflow:hidden;}
             <button id="btn-proof">Create Proof</button>
           </div>
           <div class="proof-actions">
-            <button id="btn-proof-copy" type="button">Copy proof JSON</button>
+            <button class="icon-button" id="btn-proof-copy" type="button" aria-label="Copy proof JSON">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+              </svg>
+            </button>
             <button id="btn-proof-download" type="button">Download proof.json</button>
           </div>
         </div>
@@ -641,7 +673,12 @@ body.modal-open{overflow:hidden;}
           <p>Check a membership proof against the root.</p>
           <div class="actions">
             <button id="btn-verify-proof">Verify Proof</button>
-            <button id="btn-copy-output">Copy Output</button>
+            <button class="icon-button" id="btn-copy-output" type="button" aria-label="Copy output">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+              </svg>
+            </button>
           </div>
         </div>
       </details>
@@ -739,7 +776,12 @@ body.modal-open{overflow:hidden;}
       </div>
       <div class="transcript-actions">
         <button id="btn-parse-transcript" class="primary" type="button">Convert Transcript</button>
-        <button id="btn-transcript-copy" type="button">Copy JSON</button>
+        <button class="icon-button" id="btn-transcript-copy" type="button" aria-label="Copy transcript JSON">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+            <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+          </svg>
+        </button>
         <button id="btn-transcript-download" type="button">Download JSON</button>
         <button id="btn-transcript-fill" type="button">Send to Step 1</button>
       </div>
@@ -780,6 +822,12 @@ body.modal-open{overflow:hidden;}
   const exampleOverlay = document.getElementById('example-overlay');
   const exampleGrid = document.getElementById('example-grid');
   const btnExampleClose = document.getElementById('btn-example-close');
+  const COPY_ICON = `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+      <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+    </svg>
+  `;
 
   function isPlainObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -1532,7 +1580,9 @@ body.modal-open{overflow:hidden;}
 
       const copyButton = document.createElement('button');
       copyButton.type = 'button';
-      copyButton.textContent = 'Copy JSON';
+      copyButton.classList.add('icon-button');
+      copyButton.setAttribute('aria-label', 'Copy JSON');
+      copyButton.innerHTML = COPY_ICON;
       copyButton.addEventListener('click', () => {
         copy(JSON.stringify(entry.meeting, null, 2));
         stepLog('Step 1', `Copied ${entry.meeting.meeting_id} JSON`, 'ok');
