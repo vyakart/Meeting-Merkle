@@ -499,7 +499,7 @@ body.modal-open{overflow:hidden;}
 .proof-actions{
   display:inline-flex;
   align-items:center;
-  margin-top:10px;
+  margin:0;
   border:1px solid var(--border-weak);
   border-radius:10px;
   overflow:hidden;
@@ -688,21 +688,21 @@ body.modal-open{overflow:hidden;}
           <div class="actions row proof-row">
             <input id="proof-index" placeholder="Item index (0-based)" aria-label="Item index (optional)" />
             <button class="primary" id="btn-proof" type="button">Create Proof</button>
-          </div>
-          <div class="proof-actions">
-            <button class="icon-button" id="btn-proof-copy" type="button" aria-label="Copy proof JSON">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
-                <rect x="4" y="7" width="11" height="14" rx="2"></rect>
-              </svg>
-            </button>
-            <button class="icon-button" id="btn-proof-download" type="button" aria-label="Download proof JSON">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 4v10"></path>
-                <path d="M8 10l4 4 4-4"></path>
-                <rect x="5" y="18" width="14" height="2" rx="1"></rect>
-              </svg>
-            </button>
+            <div class="proof-actions">
+              <button class="icon-button" id="btn-proof-copy" type="button" aria-label="Copy proof JSON">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                  <rect x="4" y="7" width="11" height="14" rx="2"></rect>
+                </svg>
+              </button>
+              <button class="icon-button" id="btn-proof-download" type="button" aria-label="Download proof JSON">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 4v10"></path>
+                  <path d="M8 10l4 4 4-4"></path>
+                  <rect x="5" y="18" width="14" height="2" rx="1"></rect>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </details>
